@@ -1,0 +1,136 @@
+/* ------------------------------------------------------------------
+   butterfly.css
+   Self-contained styling for the ButterflyNavigation feature
+   (js/butterfly-navigation.js + js/butterfly-config.js).
+
+   Scope: only .butterfly-* selectors. Nothing here touches or
+   overrides any selector in css/style.css.
+------------------------------------------------------------------- */
+
+.butterfly-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* never intercepts clicks/hover on the page */
+  z-index: 90;           /* above photo cards, below .isolation (100) and .meta-panel (2000) */
+}
+
+.butterfly-creature {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--butterfly-size, 34px);
+  height: var(--butterfly-size, 34px);
+  transform: translate(-50%, -50%) rotate(var(--angle, 0deg));
+  perspective: 220px;
+  will-change: left, top, transform;
+}
+
+.butterfly-creature.is-landed {
+  animation: butterfly-perch-bob 2.8s ease-in-out infinite;
+}
+
+@keyframes butterfly-perch-bob {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(1); }
+  50%      { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(0.94); }
+}
+
+.butterfly-creature .body {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  width: 13%;
+  height: 84%;
+  transform: translateX(-50%);
+  background: linear-gradient(#3a2c22, #17100c);
+  border-radius: 50% 50% 40% 40%;
+  z-index: 2;
+}
+
+.butterfly-creature .antenna {
+  position: absolute;
+  top: 2%;
+  width: 1.5px;
+  height: 24%;
+  background: #241a14;
+  transform-origin: bottom center;
+  z-index: 3;
+}
+.butterfly-creature .antenna-l { left: 45%; transform: rotate(-20deg); }
+.butterfly-creature .antenna-r { left: 55%; transform: rotate(20deg); }
+
+.butterfly-creature .wing {
+  position: absolute;
+  top: 5%;
+  width: 47%;
+  height: 80%;
+  background: radial-gradient(circle at 35% 30%, #ffb703, #fb8500 55%, #c1440e 100%);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.25);
+  z-index: 1;
+}
+.butterfly-creature .wing-l {
+  left: 1%;
+  border-radius: 88% 12% 60% 40% / 88% 12% 88% 12%;
+  transform-origin: 100% 50%;
+  animation: butterfly-flap-l 0.22s ease-in-out infinite;
+}
+.butterfly-creature .wing-r {
+  right: 1%;
+  border-radius: 12% 88% 40% 60% / 12% 88% 12% 88%;
+  transform-origin: 0% 50%;
+  animation: butterfly-flap-r 0.22s ease-in-out infinite;
+}
+
+/* Flying: quick, wide flap. */
+@keyframes butterfly-flap-l {
+  0%, 100% { transform: rotateY(10deg); }
+  50%      { transform: rotateY(68deg); }
+}
+@keyframes butterfly-flap-r {
+  0%, 100% { transform: rotateY(-10deg); }
+  50%      { transform: rotateY(-68deg); }
+}
+
+/* Landed: wings mostly folded, slow idle twitch instead of a flap. */
+.butterfly-creature.is-landed .wing-l {
+  animation: butterfly-rest-l 3s ease-in-out infinite;
+}
+.butterfly-creature.is-landed .wing-r {
+  animation: butterfly-rest-r 3s ease-in-out infinite;
+}
+@keyframes butterfly-rest-l {
+  0%, 100% { transform: rotateY(58deg); }
+  50%      { transform: rotateY(64deg); }
+}
+@keyframes butterfly-rest-r {
+  0%, 100% { transform: rotateY(-58deg); }
+  50%      { transform: rotateY(-64deg); }
+}
+
+/* ---------------- bee variant ----------------
+   Selected via ButterflyConfig.creature = "bee" (adds class
+   creature-bee alongside the base .butterfly-creature rules above). */
+
+.butterfly-creature.creature-bee .body {
+  width: 22%;
+  border-radius: 50%;
+  background: repeating-linear-gradient(
+    to bottom,
+    #f6c90e 0, #f6c90e 18%,
+    #1c1310 18%, #1c1310 34%
+  );
+}
+.butterfly-creature.creature-bee .antenna {
+  background: #1c1310;
+}
+.butterfly-creature.creature-bee .wing {
+  background: rgba(238, 244, 255, 0.55);
+  box-shadow: inset 0 0 3px rgba(120, 120, 140, 0.45);
+}
+.butterfly-creature.creature-bee .wing-l,
+.butterfly-creature.creature-bee .wing-r {
+  animation-duration: 0.09s; /* bees flap much faster than butterflies */
+}
+.butterfly-creature.creature-bee.is-landed .wing-l,
+.butterfly-creature.creature-bee.is-landed .wing-r {
+  animation-duration: 3s;
+}
