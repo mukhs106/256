@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>256 — a camera roll</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">◐</span>
+      <div>
+        <div class="brand-name">256</div>
+        <div class="brand-sub">a camera roll, mostly</div>
+      </div>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-label">Library</div>
+      <button class="nav-item active" data-collection="all">
+        <span class="nav-item-dot" style="background:#c9c2b4"></span>
+        <span class="nav-item-name">All Photos</span>
+        <span class="nav-item-count" data-count="all"></span>
+      </button>
+    </nav>
+
+    <nav class="nav-section" id="collections-nav">
+      <div class="nav-label">Collections</div>
+      <!-- injected by js -->
+    </nav>
+
+    <div class="nav-section view-nav">
+      <div class="nav-label">View as</div>
+      <div class="view-modes" role="tablist">
+        <button data-mode="wander" class="mode-btn active" role="tab">Wander</button>
+        <button data-mode="optimize" class="mode-btn" role="tab">Optimize</button>
+        <button data-mode="color" class="mode-btn" role="tab">Color</button>
+        <button data-mode="timeline" class="mode-btn" role="tab">Timeline</button>
+      </div>
+      <button class="shuffle-btn" id="shuffle-btn" title="Re-scatter the wander view">⟲ Shuffle</button>
+    </div>
+
+    <div class="sidebar-footer">
+      placeholder set · swap in the real 256 later
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="toolbar">
+      <div class="toolbar-left">
+        <h1 class="collection-title" id="collection-title">All Photos</h1>
+        <span class="collection-count" id="collection-count"></span>
+      </div>
+      <div class="toolbar-right" id="collection-blurb"></div>
+    </header>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <div class="canvas mode-wander" id="canvas"></div>
+    </div>
+  </main>
+
+  <div class="meta-panel" id="meta-panel" hidden>
+    <div class="meta-row meta-primary" id="meta-primary"></div>
+    <div class="meta-grid">
+      <div class="meta-field"><span class="meta-key">date</span><span class="meta-val" id="meta-date"></span></div>
+      <div class="meta-field"><span class="meta-key">from</span><span class="meta-val" id="meta-source"></span></div>
+      <div class="meta-field"><span class="meta-key">where</span><span class="meta-val" id="meta-location"></span></div>
+      <div class="meta-field"><span class="meta-key">size</span><span class="meta-val" id="meta-dims"></span></div>
+    </div>
+  </div>
+
+  <div class="isolation" id="isolation" hidden>
+    <button class="isolation-close" id="isolation-close" aria-label="Close">✕</button>
+
+    <div class="isolation-trail" id="isolation-trail"></div>
+
+    <div class="isolation-stage">
+      <div class="isolation-paths isolation-paths-left" id="paths-left"></div>
+      <div class="isolation-image-wrap">
+        <div class="isolation-image" id="isolation-image"></div>
+        <div class="isolation-meta" id="isolation-meta"></div>
+      </div>
+      <div class="isolation-paths isolation-paths-right" id="paths-right"></div>
+    </div>
+
+    <div class="isolation-hint">choose a direction, or wander back through the trail above</div>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
