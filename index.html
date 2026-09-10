@@ -22,28 +22,20 @@
     </div>
 
     <nav class="nav-section">
-      <div class="nav-label">Library</div>
-      <button class="nav-item active" data-collection="all">
-        <span class="nav-item-dot" style="background:#c9c2b4"></span>
+      <div class="nav-label">library</div>
+      <button class="nav-item active" data-collection="all" id="nav-all">
+        <span class="nav-item-preview" id="nav-all-preview"></span>
         <span class="nav-item-name">All Photos</span>
-        <span class="nav-item-count" data-count="all"></span>
       </button>
     </nav>
 
     <nav class="nav-section" id="collections-nav">
-      <div class="nav-label">Collections</div>
+      <div class="nav-label">collections</div>
       <!-- injected by js -->
     </nav>
 
-    <div class="nav-section view-nav">
-      <div class="nav-label">View as</div>
-      <div class="view-modes" role="tablist">
-        <button data-mode="wander" class="mode-btn active" role="tab">Wander</button>
-        <button data-mode="optimize" class="mode-btn" role="tab">Optimize</button>
-        <button data-mode="color" class="mode-btn" role="tab">Color</button>
-        <button data-mode="timeline" class="mode-btn" role="tab">Timeline</button>
-      </div>
-      <button class="shuffle-btn" id="shuffle-btn" title="Re-scatter the wander view">⟲ Shuffle</button>
+    <div class="nav-section">
+      <button class="shuffle-btn" id="shuffle-btn" title="Re-scatter the library">⟲ shuffle</button>
     </div>
 
     <div class="sidebar-footer">
@@ -61,17 +53,21 @@
     </header>
 
     <div class="canvas-wrap" id="canvas-wrap">
-      <div class="canvas mode-wander" id="canvas"></div>
+      <div class="canvas" id="canvas"></div>
     </div>
   </main>
 
   <div class="meta-panel" id="meta-panel" hidden>
     <div class="meta-row meta-primary" id="meta-primary"></div>
     <div class="meta-grid">
-      <div class="meta-field"><span class="meta-key">date</span><span class="meta-val" id="meta-date"></span></div>
-      <div class="meta-field"><span class="meta-key">from</span><span class="meta-val" id="meta-source"></span></div>
-      <div class="meta-field"><span class="meta-key">where</span><span class="meta-val" id="meta-location"></span></div>
-      <div class="meta-field"><span class="meta-key">size</span><span class="meta-val" id="meta-dims"></span></div>
+      <div class="meta-field"><span class="meta-key">type</span><span class="meta-val" id="meta-type"></span></div>
+      <div class="meta-field"><span class="meta-key">kept because</span><span class="meta-val" id="meta-kept"></span></div>
+      <div class="meta-field"><span class="meta-key">source</span><span class="meta-val" id="meta-source"></span></div>
+      <div class="meta-field"><span class="meta-key">when</span><span class="meta-val" id="meta-when"></span></div>
+      <div class="meta-field"><span class="meta-key">where</span><span class="meta-val" id="meta-where"></span></div>
+      <div class="meta-field"><span class="meta-key">returned to</span><span class="meta-val" id="meta-returned"></span></div>
+      <div class="meta-field"><span class="meta-key">connection</span><span class="meta-val" id="meta-connection"></span></div>
+      <div class="meta-field"><span class="meta-key">still like it?</span><span class="meta-val" id="meta-still"></span></div>
     </div>
   </div>
 

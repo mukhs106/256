@@ -7,11 +7,8 @@
 (function () {
   const { images, collections } = window.APP_DATA;
 
-  const DOT_PALETTE = ["#c98a6b", "#8fa877", "#b087ac", "#7ea3b0", "#d1ab5a", "#9c8ac9", "#6fab93", "#c17e8c"];
-
   const state = {
     collectionId: "all",
-    mode: "wander",
     trail: [],
     isolatedId: null,
   };
@@ -42,36 +39,34 @@
     return images.filter((i) => i.collections.includes(state.collectionId));
   }
 
+  function coverFor(collectionId) {
+    const member = images.find((im) => im.collections.includes(collectionId));
+    return member || images[0];
+  }
+
   // ---------- sidebar ----------
 
   function renderSidebar() {
+    document.getElementById("nav-all-preview").style.background = colorCss(images[0]);
+    document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
+
     const nav = document.getElementById("collections-nav");
-    nav.innerHTML = '<div class="nav-label">Collections</div>';
-    collections.forEach((col, i) => {
-      const count = images.filter((im) => im.collections.includes(col.id)).length;
+    nav.innerHTML = '<div class="nav-label">collections</div>';
+    collections.forEach((col) => {
+      const cover = coverFor(col.id);
       const btn = document.createElement("button");
       btn.className = "nav-item";
       btn.dataset.collection = col.id;
-      btn.innerHTML = `<span class="nav-item-dot" style="background:${DOT_PALETTE[i % DOT_PALETTE.length]}"></span>
-        <span class="nav-item-name">${col.name}</span>
-        <span class="nav-item-count">${count}</span>`;
+      btn.innerHTML = `<span class="nav-item-preview" style="background:${colorCss(cover)}"></span>
+        <span class="nav-item-name">${col.name}</span>`;
       btn.addEventListener("click", () => selectCollection(col.id));
       nav.appendChild(btn);
     });
-
-    document.querySelector('[data-count="all"]').textContent = images.length;
-    document.querySelector('.nav-item[data-collection="all"]').addEventListener("click", () => selectCollection("all"));
   }
 
   function updateNavActive() {
     document.querySelectorAll(".nav-item").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.collection === state.collectionId);
-    });
-  }
-
-  function updateModeActive() {
-    document.querySelectorAll(".mode-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.mode === state.mode);
     });
   }
 
@@ -92,22 +87,9 @@
 
   function selectCollection(id) {
     state.collectionId = id;
-    if (id !== "all") {
-      const col = collections.find((c) => c.id === id);
-      state.mode = col.defaultView;
-    } else {
-      state.mode = "wander";
-    }
     updateNavActive();
-    updateModeActive();
     renderCanvas();
     closeSidebarOnMobile();
-  }
-
-  function setMode(mode) {
-    state.mode = mode;
-    updateModeActive();
-    renderCanvas();
   }
 
   // ---------- card element ----------
@@ -129,11 +111,14 @@
     return el;
   }
 
-  // ---------- layouts ----------
+  // ---------- layout ----------
+  // A single scattered composition: loosely packed, jittered, rotated,
+  // sized by each photo's real aspect ratio, with generous breathing
+  // room between images and only a rare, slight overlap.
 
   function layoutWander(container, imgs) {
     const width = container.clientWidth || 900;
-    const colWidth = width < 620 ? 150 : width < 960 ? 190 : 220;
+    const colWidth = width < 640 ? 210 : width < 1000 ? 260 : 310;
     const cols = Math.max(2, Math.floor(width / colWidth));
     const actualColWidth = width / cols;
     const colHeights = new Array(cols).fill(0);
@@ -146,21 +131,21 @@
 
     order.forEach((img) => {
       let col;
-      if (Math.random() < 0.82) {
+      if (Math.random() < 0.85) {
         col = colHeights.indexOf(Math.min(...colHeights));
       } else {
         col = Math.floor(Math.random() * cols);
       }
       const w = img.w, h = img.h;
-      const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.4);
+      const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.45);
       let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
-      left = Math.max(6, Math.min(width - w - 6, left));
+      left = Math.max(10, Math.min(width - w - 10, left));
 
-      let gap = 20 + Math.random() * 26;
-      if (Math.random() < 0.15) gap = -(6 + Math.random() * 38); // occasional overlap
+      let gap = 70 + Math.random() * 90;
+      if (Math.random() < 0.05) gap = -(6 + Math.random() * 22); // rare, slight overlap
       const top = Math.max(0, colHeights[col] + gap);
 
-      const rotation = (Math.random() * 16 - 8).toFixed(1);
+      const rotation = (Math.random() * 14 - 7).toFixed(1);
       const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
 
       const el = makeCard(img);
@@ -176,76 +161,38 @@
       colHeights[col] = top + h;
     });
 
-    container.style.height = Math.max(...colHeights, 300) + 140 + "px";
-  }
-
-  function layoutOptimize(container, imgs) {
-    const sorted = imgs.slice().sort((a, b) => a.date - b.date);
-    sorted.forEach((img) => {
-      const el = makeCard(img);
-      container.appendChild(el);
-    });
-  }
-
-  function layoutColor(container, imgs) {
-    const sorted = imgs.slice().sort((a, b) => a.hue - b.hue);
-    sorted.forEach((img) => {
-      const targetH = 120;
-      const w = Math.round(targetH * (img.w / img.h));
-      const el = makeCard(img);
-      el.style.width = w + "px";
-      el.style.height = targetH + "px";
-      container.appendChild(el);
-    });
-  }
-
-  function layoutTimeline(container, imgs) {
-    const sorted = imgs.slice().sort((a, b) => a.date - b.date);
-    let lastKey = null;
-    sorted.forEach((img) => {
-      const key = img.date.getFullYear() + "-" + img.date.getMonth();
-      if (key !== lastKey) {
-        const label = document.createElement("div");
-        label.className = "timeline-label";
-        label.textContent = img.date.toLocaleString("default", { month: "short", year: "2-digit" });
-        container.appendChild(label);
-        lastKey = key;
-      }
-      const baseH = 90 + img.significance * 90;
-      const w = Math.round(baseH * (img.w / img.h));
-      const el = makeCard(img);
-      el.style.height = baseH + "px";
-      el.style.width = w + "px";
-      container.appendChild(el);
-    });
+    container.style.height = Math.max(...colHeights, 300) + 160 + "px";
   }
 
   function renderCanvas() {
     const canvas = document.getElementById("canvas");
     canvas.innerHTML = "";
     canvas.style.height = "";
-    canvas.className = "canvas mode-" + state.mode;
 
     const imgs = filteredImages();
     updateHeader(imgs.length);
-
-    if (state.mode === "wander") layoutWander(canvas, imgs);
-    else if (state.mode === "optimize") layoutOptimize(canvas, imgs);
-    else if (state.mode === "color") layoutColor(canvas, imgs);
-    else if (state.mode === "timeline") layoutTimeline(canvas, imgs);
+    layoutWander(canvas, imgs);
   }
 
   // ---------- metadata panel ----------
+
+  function fillMetaFields(prefix, img) {
+    document.getElementById(prefix + "-type").textContent = img.type;
+    document.getElementById(prefix + "-kept").textContent = img.keptBecause;
+    document.getElementById(prefix + "-source").textContent = img.source;
+    document.getElementById(prefix + "-when").textContent = img.dateLabel;
+    document.getElementById(prefix + "-where").textContent = img.location;
+    document.getElementById(prefix + "-returned").textContent = img.returnedTo;
+    document.getElementById(prefix + "-connection").textContent = img.connection;
+    document.getElementById(prefix + "-still").textContent = img.stillLikeIt;
+  }
 
   function showMeta(img) {
     if (!document.getElementById("isolation").hidden) return;
     const panel = document.getElementById("meta-panel");
     panel.hidden = false;
     document.getElementById("meta-primary").textContent = img.code;
-    document.getElementById("meta-date").textContent = img.dateLabel;
-    document.getElementById("meta-source").textContent = img.source;
-    document.getElementById("meta-location").textContent = img.location;
-    document.getElementById("meta-dims").textContent = img.dims;
+    fillMetaFields("meta", img);
   }
 
   function hideMeta() {
@@ -343,11 +290,16 @@
     document.getElementById("isolation-meta").innerHTML = `
       <div class="meta-primary">${img.code}</div>
       <div class="meta-grid">
-        <div class="meta-field"><span class="meta-key">date</span><span class="meta-val">${img.dateLabel}</span></div>
-        <div class="meta-field"><span class="meta-key">from</span><span class="meta-val">${img.source}</span></div>
-        <div class="meta-field"><span class="meta-key">where</span><span class="meta-val">${img.location}</span></div>
-        <div class="meta-field"><span class="meta-key">size</span><span class="meta-val">${img.dims}</span></div>
+        <div class="meta-field"><span class="meta-key">type</span><span class="meta-val" id="iso-type"></span></div>
+        <div class="meta-field"><span class="meta-key">kept because</span><span class="meta-val" id="iso-kept"></span></div>
+        <div class="meta-field"><span class="meta-key">source</span><span class="meta-val" id="iso-source"></span></div>
+        <div class="meta-field"><span class="meta-key">when</span><span class="meta-val" id="iso-when"></span></div>
+        <div class="meta-field"><span class="meta-key">where</span><span class="meta-val" id="iso-where"></span></div>
+        <div class="meta-field"><span class="meta-key">returned to</span><span class="meta-val" id="iso-returned"></span></div>
+        <div class="meta-field"><span class="meta-key">connection</span><span class="meta-val" id="iso-connection"></span></div>
+        <div class="meta-field"><span class="meta-key">still like it?</span><span class="meta-val" id="iso-still"></span></div>
       </div>`;
+    fillMetaFields("iso", img);
 
     renderTrail();
     renderPaths(img);
@@ -385,12 +337,7 @@
   function init() {
     renderSidebar();
     updateNavActive();
-    updateModeActive();
     renderCanvas();
-
-    document.querySelectorAll(".mode-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setMode(btn.dataset.mode));
-    });
 
     document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
 
@@ -406,9 +353,7 @@
       document.getElementById("app").classList.toggle("sidebar-open");
     });
 
-    window.addEventListener("resize", debounce(() => {
-      if (state.mode === "wander") renderCanvas();
-    }, 200));
+    window.addEventListener("resize", debounce(renderCanvas, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);
