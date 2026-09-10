@@ -15,8 +15,8 @@
 
   // ---------- helpers ----------
 
-  function colorCss(img) {
-    return `linear-gradient(135deg, hsl(${img.hue} ${img.sat}% ${img.light1}%), hsl(${img.hue2} ${img.sat}% ${img.light2}%))`;
+  function imgUrl(img) {
+    return "images/" + img.file;
   }
 
   function hueDist(a, b) {
@@ -44,10 +44,30 @@
     return member || images[0];
   }
 
+  // ---------- preload real image dimensions ----------
+  // The cards are absolutely positioned by the layout algorithm before
+  // they're added to the page, so we need each photo's real aspect
+  // ratio up front rather than letting the <img> load it lazily.
+
+  function preloadDimensions() {
+    return Promise.all(images.map((img) => new Promise((resolve) => {
+      const probe = new Image();
+      probe.onload = () => {
+        const nw = probe.naturalWidth || 1;
+        const nh = probe.naturalHeight || 1;
+        if (nw >= nh) { img.w = img.baseLong; img.h = Math.round(img.baseLong * nh / nw); }
+        else { img.h = img.baseLong; img.w = Math.round(img.baseLong * nw / nh); }
+        resolve();
+      };
+      probe.onerror = resolve; // keep the provisional square box
+      probe.src = imgUrl(img);
+    })));
+  }
+
   // ---------- sidebar ----------
 
   function renderSidebar() {
-    document.getElementById("nav-all-preview").style.background = colorCss(images[0]);
+    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
     document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
 
     const nav = document.getElementById("collections-nav");
@@ -57,7 +77,7 @@
       const btn = document.createElement("button");
       btn.className = "nav-item";
       btn.dataset.collection = col.id;
-      btn.innerHTML = `<span class="nav-item-preview" style="background:${colorCss(cover)}"></span>
+      btn.innerHTML = `<span class="nav-item-preview" style="background-image:url('${imgUrl(cover)}')"></span>
         <span class="nav-item-name">${col.name}</span>`;
       btn.addEventListener("click", () => selectCollection(col.id));
       nav.appendChild(btn);
@@ -98,7 +118,13 @@
     const el = document.createElement("div");
     el.className = "photo-card size-" + img.sizeBucket;
     el.dataset.id = img.id;
-    el.style.background = colorCss(img);
+
+    const photo = document.createElement("img");
+    photo.src = imgUrl(img);
+    photo.alt = "";
+    photo.loading = "lazy";
+    photo.decoding = "async";
+    el.appendChild(photo);
 
     const tag = document.createElement("span");
     tag.className = "photo-index";
@@ -174,30 +200,28 @@
     layoutWander(canvas, imgs);
   }
 
-  // ---------- metadata panel ----------
+  // ---------- metadata panel (docked to the bottom of the sidebar) ----------
 
-  function fillMetaFields(prefix, img) {
-    document.getElementById(prefix + "-type").textContent = img.type;
-    document.getElementById(prefix + "-kept").textContent = img.keptBecause;
-    document.getElementById(prefix + "-source").textContent = img.source;
-    document.getElementById(prefix + "-when").textContent = img.dateLabel;
-    document.getElementById(prefix + "-where").textContent = img.location;
-    document.getElementById(prefix + "-returned").textContent = img.returnedTo;
-    document.getElementById(prefix + "-connection").textContent = img.connection;
-    document.getElementById(prefix + "-still").textContent = img.stillLikeIt;
+  function setMetaPanel(img) {
+    document.getElementById("meta-primary").textContent = img ? img.code : " ";
+    document.getElementById("meta-type").textContent = img ? img.type : "";
+    document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
+    document.getElementById("meta-source").textContent = img ? img.source : "";
+    document.getElementById("meta-when").textContent = img ? img.dateLabel : "";
+    document.getElementById("meta-where").textContent = img ? img.location : "";
+    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
+    document.getElementById("meta-connection").textContent = img ? img.connection : "";
+    document.getElementById("meta-still").textContent = img ? img.stillLikeIt : "";
   }
 
   function showMeta(img) {
     if (!document.getElementById("isolation").hidden) return;
-    const panel = document.getElementById("meta-panel");
-    panel.hidden = false;
-    document.getElementById("meta-primary").textContent = img.code;
-    fillMetaFields("meta", img);
+    setMetaPanel(img);
   }
 
   function hideMeta() {
     if (!document.getElementById("isolation").hidden) return;
-    document.getElementById("meta-panel").hidden = true;
+    setMetaPanel(null);
   }
 
   // ---------- isolation view ----------
@@ -235,7 +259,7 @@
       const im = images.find((x) => x.id === id);
       const dot = document.createElement("button");
       dot.className = "trail-dot" + (id === state.isolatedId ? " current" : "");
-      dot.style.background = colorCss(im);
+      dot.style.backgroundImage = `url('${imgUrl(im)}')`;
       dot.title = im.code;
       dot.addEventListener("click", () => {
         state.trail = state.trail.slice(0, i + 1);
@@ -263,7 +287,7 @@
       const target = i % 2 === 0 ? left : right;
       const btn = document.createElement("button");
       btn.className = "path-btn";
-      btn.innerHTML = `<span class="path-thumb" style="background:${colorCss(p.image)}"></span><span class="path-label">${p.label}</span>`;
+      btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span><span class="path-label">${p.label}</span>`;
       btn.addEventListener("click", () => {
         state.trail.push(p.image.id);
         state.isolatedId = p.image.id;
@@ -275,7 +299,7 @@
 
   function renderIsolation(img) {
     const stage = document.getElementById("isolation-image");
-    stage.style.background = colorCss(img);
+    stage.src = imgUrl(img);
 
     const aspect = img.w / img.h;
     const maxW = Math.min(window.innerWidth * 0.5, 520);
@@ -287,19 +311,9 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    document.getElementById("isolation-meta").innerHTML = `
-      <div class="meta-primary">${img.code}</div>
-      <div class="meta-grid">
-        <div class="meta-field"><span class="meta-key">type</span><span class="meta-val" id="iso-type"></span></div>
-        <div class="meta-field"><span class="meta-key">kept because</span><span class="meta-val" id="iso-kept"></span></div>
-        <div class="meta-field"><span class="meta-key">source</span><span class="meta-val" id="iso-source"></span></div>
-        <div class="meta-field"><span class="meta-key">when</span><span class="meta-val" id="iso-when"></span></div>
-        <div class="meta-field"><span class="meta-key">where</span><span class="meta-val" id="iso-where"></span></div>
-        <div class="meta-field"><span class="meta-key">returned to</span><span class="meta-val" id="iso-returned"></span></div>
-        <div class="meta-field"><span class="meta-key">connection</span><span class="meta-val" id="iso-connection"></span></div>
-        <div class="meta-field"><span class="meta-key">still like it?</span><span class="meta-val" id="iso-still"></span></div>
-      </div>`;
-    fillMetaFields("iso", img);
+    // Metadata for the isolated photo lives in the same corner dock as
+    // the hover metadata, not inline in the stage.
+    setMetaPanel(img);
 
     renderTrail();
     renderPaths(img);
@@ -309,7 +323,6 @@
     state.trail = [img.id];
     state.isolatedId = img.id;
     document.getElementById("isolation").hidden = false;
-    document.getElementById("meta-panel").hidden = true;
     renderIsolation(img);
   }
 
@@ -317,6 +330,7 @@
     document.getElementById("isolation").hidden = true;
     state.trail = [];
     state.isolatedId = null;
+    setMetaPanel(null);
   }
 
   // ---------- sidebar toggle (mobile) ----------
@@ -334,10 +348,13 @@
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
-  function init() {
+  async function init() {
+    await preloadDimensions();
+
     renderSidebar();
     updateNavActive();
     renderCanvas();
+    setMetaPanel(null);
 
     document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
 
