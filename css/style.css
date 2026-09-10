@@ -74,15 +74,7 @@ button {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   padding: 4px 6px 20px;
-}
-
-.brand-mark {
-  font-size: 20px;
-  color: var(--ink);
 }
 
 .brand-name {
@@ -133,7 +125,7 @@ button {
 .nav-item-preview {
   width: 28px;
   height: 28px;
-  border-radius: 5px;
+  border-radius: 3px;
   flex: 0 0 auto;
   background-color: var(--line);
   background-size: cover;
@@ -175,7 +167,7 @@ button {
 
 .toolbar {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 22px 28px 14px;
@@ -184,8 +176,8 @@ button {
 
 .toolbar-left {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .collection-title {
@@ -194,15 +186,17 @@ button {
   font-weight: 700;
 }
 
-.collection-count {
-  font-size: 12px;
-  color: var(--ink-faint);
-}
-
-.toolbar-right {
+.collection-blurb {
   font-size: 12px;
   color: var(--ink-faint);
   font-style: italic;
+}
+
+.collection-count {
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-align: right;
+  white-space: nowrap;
 }
 
 .canvas-wrap {
@@ -224,7 +218,7 @@ button {
 /* ---------------- photo card ---------------- */
 
 .photo-card {
-  border-radius: 6px;
+  border-radius: 3px;
   box-shadow: var(--card-shadow);
   cursor: pointer;
   position: relative;
@@ -233,6 +227,10 @@ button {
   outline: 1px solid rgba(255, 255, 255, 0.4);
   outline-offset: -1px;
 }
+
+.photo-card.size-small { border-radius: 2px; }
+.photo-card.size-medium { border-radius: 3px; }
+.photo-card.size-large { border-radius: 4px; }
 
 .photo-card img {
   display: block;
@@ -270,42 +268,50 @@ button {
   left: 0;
   bottom: 0;
   width: var(--sidebar-w);
+  height: 232px;
   background: var(--paper);
   color: var(--ink);
-  border-top: 1px solid var(--line);
   padding: 16px 14px;
   font-size: 11.5px;
-  box-shadow: 0 -8px 20px -12px rgba(0, 0, 0, 0.15);
   z-index: 2000;
+  overflow: hidden;
 }
 
 .meta-primary {
   font-weight: 700;
   font-size: 12px;
-  margin-bottom: 8px;
+  line-height: 14px;
+  margin-bottom: 10px;
   color: var(--ink);
 }
 
 .meta-grid {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .meta-field {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  gap: 4px;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .meta-key {
+  flex: 0 0 auto;
   font-size: 10px;
   color: var(--ink-faint);
 }
 
 .meta-val {
+  flex: 1 1 auto;
   font-size: 11.5px;
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---------------- isolation view ---------------- */
@@ -384,7 +390,7 @@ button {
 .isolation-image {
   display: block;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 5px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
   flex: 0 0 auto;
 }
@@ -412,7 +418,7 @@ button {
 .path-thumb {
   width: 62px;
   height: 62px;
-  border-radius: 8px;
+  border-radius: 4px;
   background-color: var(--line);
   background-size: cover;
   background-position: center;

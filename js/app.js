@@ -100,7 +100,7 @@
     } else {
       const col = collections.find((c) => c.id === state.collectionId);
       titleEl.textContent = col.name;
-      blurbEl.textContent = col.blurb;
+      blurbEl.textContent = col.tag;
     }
     countEl.textContent = count + (count === 1 ? " image" : " images");
   }
@@ -230,24 +230,35 @@
     const pool = images.filter((i) => i.id !== img.id);
     const notInTrail = pool.filter((i) => !state.trail.includes(i.id));
     const source = notInTrail.length ? notInTrail : pool;
+    const used = [];
 
-    const byColor = pickBest(source, (i) => hueDist(i.hue, img.hue), false);
+    function takeBest(scoreFn) {
+      const candidates = source.filter((i) => !used.includes(i.id));
+      const pick = pickBest(candidates.length ? candidates : source, scoreFn, false);
+      if (pick) used.push(pick.id);
+      return pick;
+    }
 
-    const moodPool = source.filter((i) => i.mood === img.mood && (!byColor || i.id !== byColor.id));
-    const byMood = moodPool.length ? moodPool[Math.floor(Math.random() * moodPool.length)] : null;
+    function takeMatching(matchFn) {
+      const matches = source.filter((i) => matchFn(i) && !used.includes(i.id));
+      const pick = matches.length ? matches[Math.floor(Math.random() * matches.length)] : null;
+      if (pick) used.push(pick.id);
+      return pick;
+    }
 
-    const usedSoFar = [byColor, byMood].filter(Boolean).map((i) => i.id);
-    const subjPool = source.filter((i) => i.subject === img.subject && !usedSoFar.includes(i.id));
-    const bySubject = subjPool.length ? subjPool[Math.floor(Math.random() * subjPool.length)] : null;
-
-    const usedAll = [byColor, byMood, bySubject].filter(Boolean).map((i) => i.id);
-    const timePool = source.filter((i) => !usedAll.includes(i.id));
-    const byTime = pickBest(timePool.length ? timePool : source, (i) => Math.abs(i.date - img.date), false);
+    const byColor = takeBest((i) => hueDist(i.hue, img.hue));
+    const byMood = takeMatching((i) => i.mood === img.mood);
+    const bySubject = takeMatching((i) => i.subject === img.subject);
+    const byTexture = takeMatching((i) => i.texture === img.texture);
+    const byReason = takeMatching((i) => i.keptBecause === img.keptBecause);
+    const byTime = takeBest((i) => Math.abs(i.date - img.date));
 
     return [
       { label: "same color", image: byColor },
       { label: "same mood — " + img.mood, image: byMood },
       { label: "same subject — " + img.subject, image: bySubject },
+      { label: "same texture — " + img.texture, image: byTexture },
+      { label: "kept for a similar reason", image: byReason },
       { label: "around the same time", image: byTime },
     ].filter((p) => p.image);
   }

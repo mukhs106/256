@@ -50,13 +50,13 @@
   const STILL_LIKE_IT = ["yes", "not really", "unsure", "more than before", "less than before", "yes, more than I expected"];
 
   const COLLECTIONS = [
-    { id: "made-me-stop", name: "Made Me Stop", blurb: "something interrupted your attention enough to capture/save it" },
-    { id: "look-again", name: "Look Again", blurb: "something became more interesting through repeated looking" },
-    { id: "keep-this", name: "I Had to Keep This", blurb: "an impulse to preserve something without necessarily knowing why" },
-    { id: "one-thing", name: "One Thing Led to Another", blurb: "an image that came from following an association, reference, detail, or curiosity" },
-    { id: "keep-looking", name: "Keep Looking", blurb: "images that reward closer or longer attention" },
-    { id: "again", name: "Again", blurb: "things you repeatedly returned to, noticed, saved, or recreated" },
-    { id: "why-like-this", name: "Why Do I Like This?", blurb: "things whose appeal is difficult to rationalize" },
+    { id: "just-see", name: "Just See What Happens", tag: "experimentation" },
+    { id: "make-into", name: "Make It Into Something Else", tag: "imagination" },
+    { id: "no-point", name: "No Point", tag: "?" },
+    { id: "play-rules", name: "Play With the Rules", tag: "bending systems" },
+    { id: "lose-track", name: "Lose Track of Time", tag: "absorption" },
+    { id: "play-together", name: "Play Together", tag: "social play" },
+    { id: "what-else", name: "What Else Could It Be?", tag: "possibility" },
   ];
 
   const images = FILES.map((file, i) => {
@@ -113,22 +113,24 @@
   images.forEach((img) => {
     const cols = new Set();
 
-    if (img.mood === "proud" || img.mood === "giddy" || img.mood === "curious") {
-      if (chance(0.45)) cols.add("made-me-stop");
+    if (img.texture === "grainy" || img.texture === "blurry" || img.texture === "harsh" || img.mood === "curious") {
+      if (chance(0.4)) cols.add("just-see");
     }
-    if (["light", "reflection", "shadow", "water"].includes(img.subject) && chance(0.4)) {
-      cols.add("look-again");
+    if (["object", "shadow", "reflection", "light"].includes(img.subject)) {
+      if (chance(0.4)) cols.add("make-into");
     }
-    if (chance(0.28)) cols.add("keep-this");
-    if (img.subject === "sign" || img.subject === "text" || img.subject === "screen") {
-      if (chance(0.5)) cols.add("one-thing");
+    if (chance(0.25)) cols.add("no-point");
+    if (img.subject === "sign" || img.subject === "text" || img.subject === "screen" || img.type === "secondary") {
+      if (chance(0.35)) cols.add("play-rules");
     }
-    if (["object", "shadow", "plant"].includes(img.subject) || img.texture === "sharp" || img.texture === "soft") {
-      if (chance(0.35)) cols.add("keep-looking");
+    if (["quiet", "calm", "overstimulated"].includes(img.mood) || img.returnedToCount >= 4) {
+      if (chance(0.4)) cols.add("lose-track");
     }
-    if (img.returnedToCount >= 5) cols.add("again");
-    if (img.isColorful || img.mood === "bored" || img.mood === "tired") {
-      if (chance(0.3)) cols.add("why-like-this");
+    if (["hands", "crowd", "pet", "self"].includes(img.subject)) {
+      if (chance(0.45)) cols.add("play-together");
+    }
+    if (["water", "sky", "plant"].includes(img.subject) || img.texture === "soft" || img.texture === "bright") {
+      if (chance(0.35)) cols.add("what-else");
     }
     if (cols.size === 0) cols.add(pick(COLLECTIONS).id);
 
