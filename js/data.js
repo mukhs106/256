@@ -59,13 +59,13 @@
   const CONNECTIONS = ["a color I keep noticing", "the same kind of light", "an object I can't place", "a shape that repeats", "someone else's hands", "a feeling more than a subject", "the same time of day", "an old habit", "something almost familiar", "a texture, not a subject", "no clear reason", "a detail I followed"];
 
   const COLLECTIONS = [
-    { id: "just-see", name: "Just See What Happens [experimentation]" },
-    { id: "make-into", name: "Make It Into Something Else [imagination]" },
-    { id: "no-point", name: "No Point [?]" },
-    { id: "play-rules", name: "Play With the Rules [bending systems]" },
-    { id: "lose-track", name: "Lose Track of Time [absorption]" },
-    { id: "play-together", name: "Play Together [social play]" },
-    { id: "what-else", name: "What Else Could It Be? [possibility]" },
+    { id: "just-see", name: "JUST SEE WHAT HAPPENS [EXPERIMENTATION]" },
+    { id: "make-into", name: "MAKE IT INTO SOMETHING ELSE [IMAGINATION]" },
+    { id: "no-point", name: "NO POINT [?]" },
+    { id: "play-rules", name: "PLAY WITH THE RULES [BENDING SYSTEMS]" },
+    { id: "lose-track", name: "LOSE TRACK OF TIME [ABSORPTION]" },
+    { id: "play-together", name: "PLAY TOGETHER [SOCIAL PLAY]" },
+    { id: "what-else", name: "WHAT ELSE COULD IT BE? [POSSIBILITY]" },
   ];
 
   // ---- real curated data: which numbered photo goes where ----
@@ -118,7 +118,7 @@
     const sizeBucket = sizeRoll < 0.32 ? "small" : sizeRoll < 0.72 ? "medium" : "large";
     // Target long edge for the card — actual w/h get filled in once the
     // real image dimensions are known (see app.js preloadDimensions()).
-    const baseLong = sizeBucket === "small" ? randInt(130, 170) : sizeBucket === "medium" ? randInt(180, 240) : randInt(250, 330);
+    const baseLong = sizeBucket === "small" ? randInt(110, 145) : sizeBucket === "medium" ? randInt(150, 200) : randInt(210, 275);
 
     const daysAgo = Math.round(Math.pow(rng(), 1.6) * 720);
     const date = new Date();

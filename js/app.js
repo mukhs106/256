@@ -35,8 +35,15 @@
   }
 
   function filteredImages() {
-    if (state.collectionId === "all" || state.collectionId === "library") return images;
+    if (state.collectionId === "all") return images;
     return images.filter((i) => i.collections.includes(state.collectionId));
+  }
+
+  // Collection names are stored as "TITLE [tag]" — split them so the
+  // sidebar can show the title and bracketed tag on their own lines.
+  function splitTitle(name) {
+    const m = name.match(/^(.*)\s\[(.*)\]\s*$/);
+    return m ? { title: m[1], tag: m[2] } : { title: name, tag: "" };
   }
 
   function coverFor(collectionId) {
@@ -70,18 +77,19 @@
     document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
     document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
 
-    document.getElementById("nav-library-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
-    document.getElementById("nav-library").addEventListener("click", () => selectCollection("library"));
-
     const nav = document.getElementById("collections-nav");
     nav.innerHTML = '<div class="nav-label">collections</div>';
     collections.forEach((col) => {
       const cover = coverFor(col.id);
+      const { title, tag } = splitTitle(col.name);
       const btn = document.createElement("button");
       btn.className = "nav-item";
       btn.dataset.collection = col.id;
       btn.innerHTML = `<span class="nav-item-preview" style="background-image:url('${imgUrl(cover)}')"></span>
-        <span class="nav-item-name">${col.name}</span>`;
+        <span class="nav-item-name">
+          <span class="nav-item-title">${title}</span>
+          ${tag ? `<span class="nav-item-tag">${tag}</span>` : ""}
+        </span>`;
       btn.addEventListener("click", () => selectCollection(col.id));
       nav.appendChild(btn);
     });
@@ -100,9 +108,6 @@
     if (state.collectionId === "all") {
       titleEl.textContent = "All Photos";
       blurbEl.textContent = "";
-    } else if (state.collectionId === "library") {
-      titleEl.textContent = "time well wasted!";
-      blurbEl.textContent = "an archive of play";
     } else {
       const col = collections.find((c) => c.id === state.collectionId);
       titleEl.textContent = col.name;
@@ -157,7 +162,7 @@
 
   function layoutWander(container, imgs) {
     const width = container.clientWidth || 900;
-    const colWidth = width < 640 ? 210 : width < 1000 ? 260 : 310;
+    const colWidth = width < 640 ? 175 : width < 1000 ? 210 : 245;
     const cols = Math.max(2, Math.floor(width / colWidth));
     const actualColWidth = width / cols;
     const colHeights = new Array(cols).fill(0);
@@ -180,8 +185,8 @@
       let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
       left = Math.max(10, Math.min(width - w - 10, left));
 
-      let gap = 70 + Math.random() * 90;
-      if (Math.random() < 0.05) gap = -(6 + Math.random() * 22); // rare, slight overlap
+      let gap = 55 + Math.random() * 72;
+      if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
       const top = Math.max(0, colHeights[col] + gap);
 
       const rotation = (Math.random() * 14 - 7).toFixed(1);
