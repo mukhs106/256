@@ -29,11 +29,21 @@
 
   // The actual photos, dropped into /images.
   const FILES = [
-    "IMG_2682.JPG", "IMG_2793.JPG", "IMG_2988.jpeg", "IMG_3026.jpg",
-    "IMG_3027.jpg", "IMG_3197.JPG", "IMG_3203.jpg", "IMG_3550.JPG",
-    "IMG_6717.jpg", "Tezza-2898.JPG", "Tezza-2931.JPG", "Tezza-5352.JPG",
-    "Tezza-8579.JPG", "cosmos_1411513056.jpeg", "cosmos_1549046018.jpeg",
-    "cosmos_457780706.jpeg", "cosmos_988344146.jpeg",
+    "IMG_01.jpeg", "IMG_017.jpeg", "IMG_018.jpeg", "IMG_02.jpeg", "IMG_03.jpeg", "IMG_04.jpeg",
+    "IMG_05.jpeg", "IMG_06.jpeg", "IMG_07.jpeg", "IMG_08.jpeg", "IMG_09.jpeg", "IMG_10.jpeg",
+    "IMG_11.jpeg", "IMG_12.jpeg", "IMG_13.jpeg", "IMG_14.jpeg", "IMG_15.jpeg", "IMG_16.jpeg",
+    "IMG_19.jpeg", "IMG_20.jpeg", "IMG_21.jpeg", "IMG_22.jpeg", "IMG_23.jpeg", "IMG_24.jpeg",
+    "IMG_25.jpeg", "IMG_26.jpeg", "IMG_27.jpeg", "IMG_28.jpeg", "IMG_29.jpeg", "IMG_30.jpeg",
+    "IMG_31.jpeg", "IMG_32.jpeg", "IMG_33.jpeg", "IMG_34.jpeg", "IMG_35.jpeg", "IMG_36.jpeg",
+    "IMG_37.jpeg", "IMG_38.jpeg", "IMG_39.jpeg", "IMG_40.jpeg", "IMG_41.jpeg", "IMG_42.jpeg",
+    "IMG_43.jpeg", "IMG_44.jpeg", "IMG_45.jpeg", "IMG_46.jpeg", "IMG_47.jpeg", "IMG_48.jpeg",
+    "IMG_49.jpeg", "IMG_50.jpeg", "IMG_51.jpeg", "IMG_52.jpeg", "IMG_53.jpeg", "IMG_54.jpeg",
+    "IMG_55.jpeg", "IMG_56.jpeg", "IMG_57.jpeg", "IMG_58.jpeg", "IMG_59.jpeg", "IMG_60.jpeg",
+    "IMG_61.jpeg", "IMG_62.jpeg", "IMG_63.jpeg", "IMG_64.jpeg", "IMG_65.jpeg", "IMG_66.jpeg",
+    "IMG_67.jpeg", "IMG_68.jpeg", "IMG_69.jpeg", "IMG_70.jpeg", "IMG_71.jpeg", "IMG_72.jpeg",
+    "IMG_73.jpeg", "IMG_74.jpeg", "IMG_75.jpeg", "IMG_76.webp", "IMG_77.jpeg", "IMG_78.jpeg",
+    "IMG_79.jpeg", "IMG_80.jpeg", "IMG_81.jpeg", "IMG_82.jpeg", "IMG_83.jpeg", "IMG_84.jpeg",
+    "IMG_85.jpeg",
   ];
 
   // Internal tags — placeholder, used to drive the association logic
@@ -47,7 +57,6 @@
   const LOCATIONS = ["kitchen counter", "train, somewhere", "4:02am", "friend's couch", "waiting room", "unknown", "the walk home", "backseat", "windowsill", "half asleep", "before the show", "after the rain", "not sure, honestly", "second floor"];
   const KEPT_BECAUSE = ["the color", "the light", "didn't want to lose it", "reminded me of something", "no reason", "the composition, maybe", "a feeling", "in case I forgot", "it felt important then", "still not sure", "the way it was framed", "a joke only I remember"];
   const CONNECTIONS = ["a color I keep noticing", "the same kind of light", "an object I can't place", "a shape that repeats", "someone else's hands", "a feeling more than a subject", "the same time of day", "an old habit", "something almost familiar", "a texture, not a subject", "no clear reason", "a detail I followed"];
-  const STILL_LIKE_IT = ["yes", "not really", "unsure", "more than before", "less than before", "yes, more than I expected"];
 
   const COLLECTIONS = [
     { id: "just-see", name: "Just See What Happens", tag: "experimentation" },
@@ -99,7 +108,6 @@
       date,
       returnedTo, returnedToCount,
       connection: pick(CONNECTIONS),
-      stillLikeIt: pick(STILL_LIKE_IT),
 
       isColorful: chance(0.3),
       significance: rng(),

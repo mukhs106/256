@@ -95,7 +95,7 @@
     const countEl = document.getElementById("collection-count");
     const blurbEl = document.getElementById("collection-blurb");
     if (state.collectionId === "all") {
-      titleEl.textContent = "All Photos";
+      titleEl.textContent = "Library";
       blurbEl.textContent = "";
     } else {
       const col = collections.find((c) => c.id === state.collectionId);
@@ -119,17 +119,22 @@
     el.className = "photo-card size-" + img.sizeBucket;
     el.dataset.id = img.id;
 
+    const frame = document.createElement("div");
+    frame.className = "photo-frame";
     const photo = document.createElement("img");
     photo.src = imgUrl(img);
     photo.alt = "";
     photo.loading = "lazy";
     photo.decoding = "async";
-    el.appendChild(photo);
+    frame.appendChild(photo);
+    el.appendChild(frame);
 
-    const tag = document.createElement("span");
-    tag.className = "photo-index";
-    tag.textContent = img.code;
-    el.appendChild(tag);
+    // Primary photos get one dot before the name, secondary get two.
+    const dots = img.type === "primary" ? "●" : "●●";
+    const caption = document.createElement("div");
+    caption.className = "photo-caption";
+    caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
+    el.appendChild(caption);
 
     el.addEventListener("mouseenter", () => showMeta(img));
     el.addEventListener("mouseleave", hideMeta);
@@ -141,6 +146,8 @@
   // A single scattered composition: loosely packed, jittered, rotated,
   // sized by each photo's real aspect ratio, with generous breathing
   // room between images and only a rare, slight overlap.
+
+  const CAPTION_H = 22; // approximate space the always-on caption takes below each photo
 
   function layoutWander(container, imgs) {
     const width = container.clientWidth || 900;
@@ -179,12 +186,12 @@
       el.style.left = left + "px";
       el.style.top = top + "px";
       el.style.width = w + "px";
-      el.style.height = h + "px";
       el.style.transform = `rotate(${rotation}deg)`;
       el.style.zIndex = z;
+      el.querySelector(".photo-frame").style.height = h + "px";
       container.appendChild(el);
 
-      colHeights[col] = top + h;
+      colHeights[col] = top + h + CAPTION_H;
     });
 
     container.style.height = Math.max(...colHeights, 300) + 160 + "px";
@@ -203,7 +210,7 @@
   // ---------- metadata panel (docked to the bottom of the sidebar) ----------
 
   function setMetaPanel(img) {
-    document.getElementById("meta-primary").textContent = img ? img.code : " ";
+    document.getElementById("meta-name").textContent = img ? img.code : "";
     document.getElementById("meta-type").textContent = img ? img.type : "";
     document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
     document.getElementById("meta-source").textContent = img ? img.source : "";
@@ -211,7 +218,6 @@
     document.getElementById("meta-where").textContent = img ? img.location : "";
     document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
     document.getElementById("meta-connection").textContent = img ? img.connection : "";
-    document.getElementById("meta-still").textContent = img ? img.stillLikeIt : "";
   }
 
   function showMeta(img) {
@@ -294,10 +300,23 @@
     left.innerHTML = "";
     right.innerHTML = "";
 
+    // Stagger each column into two loose sub-columns (1st & 3rd out one
+    // way, 2nd out the other) so the suggestions curve around the photo
+    // instead of lining up in a straight row.
+    const OUTER = 28;
+    const INNER = -12;
+    const counts = { left: 0, right: 0 };
+
     assoc.forEach((p, i) => {
-      const target = i % 2 === 0 ? left : right;
+      const side = i % 2 === 0 ? "left" : "right";
+      const target = side === "left" ? left : right;
+      const posInSide = counts[side]++;
+      const magnitude = posInSide % 2 === 0 ? OUTER : INNER;
+      const shift = side === "left" ? -magnitude : magnitude;
+
       const btn = document.createElement("button");
       btn.className = "path-btn";
+      btn.style.transform = `translateX(${shift}px)`;
       btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span><span class="path-label">${p.label}</span>`;
       btn.addEventListener("click", () => {
         state.trail.push(p.image.id);

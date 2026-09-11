@@ -13,7 +13,7 @@
   --line: #e8e8e8;
   --card-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.08);
   --sidebar-w: 240px;
-  --font: "Arial Narrow", Helvetica, Arial, sans-serif;
+  --font: Helvetica, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -52,7 +52,6 @@ button {
   z-index: 50;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--paper);
   font-size: 15px;
@@ -108,7 +107,6 @@ button {
   color: var(--ink-soft);
   font-size: 13px;
   padding: 7px 8px;
-  border-radius: 8px;
   text-align: left;
 }
 
@@ -125,7 +123,6 @@ button {
 .nav-item-preview {
   width: 28px;
   height: 28px;
-  border-radius: 3px;
   flex: 0 0 auto;
   background-color: var(--line);
   background-size: cover;
@@ -146,7 +143,6 @@ button {
   color: var(--ink-soft);
   font-size: 12px;
   padding: 6px 10px;
-  border-radius: 999px;
   width: 100%;
 }
 
@@ -211,28 +207,23 @@ button {
   min-height: 200px;
 }
 
-.photo-card {
-  transition: transform 0.15s ease;
-}
-
 /* ---------------- photo card ---------------- */
 
 .photo-card {
-  border-radius: 3px;
-  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease;
   cursor: pointer;
+}
+
+.photo-frame {
   position: relative;
   overflow: hidden;
   background: var(--line);
+  box-shadow: var(--card-shadow);
   outline: 1px solid rgba(255, 255, 255, 0.4);
   outline-offset: -1px;
 }
 
-.photo-card.size-small { border-radius: 2px; }
-.photo-card.size-medium { border-radius: 3px; }
-.photo-card.size-large { border-radius: 4px; }
-
-.photo-card img {
+.photo-frame img {
   display: block;
   width: 100%;
   height: 100%;
@@ -241,24 +232,33 @@ button {
 
 .photo-card:hover {
   z-index: 999 !important;
+}
+
+.photo-card:hover .photo-frame {
   box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
-.photo-index {
-  position: absolute;
-  bottom: 4px;
-  right: 6px;
-  font-size: 9px;
-  letter-spacing: 0;
-  color: rgba(255, 255, 255, 0.75);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
+.photo-caption {
+  margin-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.photo-card:hover .photo-index {
-  opacity: 1;
+.photo-dots {
+  flex: 0 0 auto;
+  font-size: 6px;
+  letter-spacing: 2px;
+  color: var(--ink);
+}
+
+.photo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------------- metadata panel ---------------- */
@@ -268,21 +268,13 @@ button {
   left: 0;
   bottom: 0;
   width: var(--sidebar-w);
-  height: 232px;
+  height: 208px;
   background: var(--paper);
   color: var(--ink);
   padding: 16px 14px;
   font-size: 11.5px;
   z-index: 2000;
   overflow: hidden;
-}
-
-.meta-primary {
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 14px;
-  margin-bottom: 10px;
-  color: var(--ink);
 }
 
 .meta-grid {
@@ -359,7 +351,6 @@ button {
 .trail-dot {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
   border: 2px solid transparent;
   padding: 0;
   background-color: var(--line);
@@ -383,14 +374,13 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 56px;
   min-height: 0;
 }
 
 .isolation-image {
   display: block;
   object-fit: cover;
-  border-radius: 5px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
   flex: 0 0 auto;
 }
@@ -398,8 +388,8 @@ button {
 .isolation-paths {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  width: 130px;
+  gap: 32px;
+  width: 150px;
 }
 
 .path-btn {
@@ -418,7 +408,6 @@ button {
 .path-thumb {
   width: 62px;
   height: 62px;
-  border-radius: 4px;
   background-color: var(--line);
   background-size: cover;
   background-position: center;
