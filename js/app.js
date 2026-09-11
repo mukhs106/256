@@ -35,7 +35,7 @@
   }
 
   function filteredImages() {
-    if (state.collectionId === "all") return images;
+    if (state.collectionId === "all" || state.collectionId === "library") return images;
     return images.filter((i) => i.collections.includes(state.collectionId));
   }
 
@@ -70,6 +70,9 @@
     document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
     document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
 
+    document.getElementById("nav-library-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
+    document.getElementById("nav-library").addEventListener("click", () => selectCollection("library"));
+
     const nav = document.getElementById("collections-nav");
     nav.innerHTML = '<div class="nav-label">collections</div>';
     collections.forEach((col) => {
@@ -95,12 +98,15 @@
     const countEl = document.getElementById("collection-count");
     const blurbEl = document.getElementById("collection-blurb");
     if (state.collectionId === "all") {
-      titleEl.textContent = "Library";
+      titleEl.textContent = "All Photos";
       blurbEl.textContent = "";
+    } else if (state.collectionId === "library") {
+      titleEl.textContent = "time well wasted!";
+      blurbEl.textContent = "an archive of play";
     } else {
       const col = collections.find((c) => c.id === state.collectionId);
       titleEl.textContent = col.name;
-      blurbEl.textContent = col.tag;
+      blurbEl.textContent = "";
     }
     countEl.textContent = count + (count === 1 ? " image" : " images");
   }

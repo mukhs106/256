@@ -59,16 +59,61 @@
   const CONNECTIONS = ["a color I keep noticing", "the same kind of light", "an object I can't place", "a shape that repeats", "someone else's hands", "a feeling more than a subject", "the same time of day", "an old habit", "something almost familiar", "a texture, not a subject", "no clear reason", "a detail I followed"];
 
   const COLLECTIONS = [
-    { id: "just-see", name: "Just See What Happens", tag: "experimentation" },
-    { id: "make-into", name: "Make It Into Something Else", tag: "imagination" },
-    { id: "no-point", name: "No Point", tag: "?" },
-    { id: "play-rules", name: "Play With the Rules", tag: "bending systems" },
-    { id: "lose-track", name: "Lose Track of Time", tag: "absorption" },
-    { id: "play-together", name: "Play Together", tag: "social play" },
-    { id: "what-else", name: "What Else Could It Be?", tag: "possibility" },
+    { id: "just-see", name: "Just See What Happens [experimentation]" },
+    { id: "make-into", name: "Make It Into Something Else [imagination]" },
+    { id: "no-point", name: "No Point [?]" },
+    { id: "play-rules", name: "Play With the Rules [bending systems]" },
+    { id: "lose-track", name: "Lose Track of Time [absorption]" },
+    { id: "play-together", name: "Play Together [social play]" },
+    { id: "what-else", name: "What Else Could It Be? [possibility]" },
   ];
 
+  // ---- real curated data: which numbered photo goes where ----
+  // Expands a spec like "1, 2, 22-29, 31-69" into [1, 2, 22, 23, ..., 69].
+  function expand(spec) {
+    const out = [];
+    spec.split(",").forEach((part) => {
+      part = part.trim();
+      if (!part) return;
+      if (part.includes("-")) {
+        const [a, b] = part.split("-").map((n) => parseInt(n, 10));
+        for (let n = a; n <= b; n++) out.push(n);
+      } else {
+        out.push(parseInt(part, 10));
+      }
+    });
+    return out;
+  }
+
+  const PRIMARY_NUMBERS = new Set(expand("1, 2, 3, 6, 14, 17, 18, 22-29, 31-69, 73, 74, 78-80"));
+  const SECONDARY_NUMBERS = new Set(expand("4, 5, 7-13, 15, 16, 19-21, 30, 70-72, 75-77, 81-84"));
+
+  const CATEGORY_NUMBERS = {
+    "just-see": expand("2, 7, 9, 11, 12, 15, 17, 18, 26, 30, 33, 35, 38, 43, 44, 50, 51, 58, 60, 61, 63, 67, 69"),
+    "make-into": expand("3, 7, 8, 9, 15, 26, 48, 50, 53, 66, 69, 72, 76, 77, 83, 84"),
+    "no-point": expand("4, 5, 7, 10, 12, 16, 20, 33, 34, 36, 39, 40, 52, 55, 59, 62, 65, 73, 79, 80"),
+    "play-rules": expand("4, 8, 15, 30, 43, 51, 61, 63, 66, 69, 75, 76, 82, 83, 84"),
+    "lose-track": expand("1, 3, 6, 18, 20, 22, 23, 24, 25, 27, 29, 31, 39, 40, 41, 44, 46, 54, 55, 57, 60, 65, 67, 80, 81"),
+    "play-together": expand("1, 13, 14, 21, 24, 28, 32, 37, 40, 41, 42, 45, 46, 47, 48, 49, 52, 53, 56, 57, 62, 68, 70, 71, 74, 75, 78, 81, 83"),
+    "what-else": expand("4, 7, 8, 10, 19, 26, 58, 61, 77"),
+  };
+
+  // filename -> its number (e.g. "IMG_017.jpeg" -> 17), so the specs
+  // above (which use plain numbers) can be matched to real files.
+  function numberFromFile(file) {
+    const m = file.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  const collectionsByNumber = {};
+  Object.entries(CATEGORY_NUMBERS).forEach(([colId, nums]) => {
+    nums.forEach((n) => {
+      (collectionsByNumber[n] = collectionsByNumber[n] || []).push(colId);
+    });
+  });
+
   const images = FILES.map((file, i) => {
+    const num = numberFromFile(file);
     const sizeRoll = rng();
     const sizeBucket = sizeRoll < 0.32 ? "small" : sizeRoll < 0.72 ? "medium" : "large";
     // Target long edge for the card — actual w/h get filled in once the
@@ -99,8 +144,8 @@
       baseLong, sizeBucket,
       w: baseLong, h: baseLong, // provisional square box until real dimensions load
 
-      // displayed metadata (placeholder)
-      type: chance(0.6) ? "primary" : "secondary",
+      // displayed metadata (placeholder — real captions/dates go here later)
+      type: PRIMARY_NUMBERS.has(num) ? "primary" : SECONDARY_NUMBERS.has(num) ? "secondary" : "secondary",
       keptBecause: pick(KEPT_BECAUSE),
       source: pick(SOURCES),
       location: pick(LOCATIONS),
@@ -111,39 +156,8 @@
 
       isColorful: chance(0.3),
       significance: rng(),
-      collections: [],
+      collections: collectionsByNumber[num] || [],
     };
-  });
-
-  // Assign collection membership based on loose tag rules, so filters
-  // feel like they're grouping *real* qualities rather than being
-  // arbitrary.
-  images.forEach((img) => {
-    const cols = new Set();
-
-    if (img.texture === "grainy" || img.texture === "blurry" || img.texture === "harsh" || img.mood === "curious") {
-      if (chance(0.4)) cols.add("just-see");
-    }
-    if (["object", "shadow", "reflection", "light"].includes(img.subject)) {
-      if (chance(0.4)) cols.add("make-into");
-    }
-    if (chance(0.25)) cols.add("no-point");
-    if (img.subject === "sign" || img.subject === "text" || img.subject === "screen" || img.type === "secondary") {
-      if (chance(0.35)) cols.add("play-rules");
-    }
-    if (["quiet", "calm", "overstimulated"].includes(img.mood) || img.returnedToCount >= 4) {
-      if (chance(0.4)) cols.add("lose-track");
-    }
-    if (["hands", "crowd", "pet", "self"].includes(img.subject)) {
-      if (chance(0.45)) cols.add("play-together");
-    }
-    if (["water", "sky", "plant"].includes(img.subject) || img.texture === "soft" || img.texture === "bright") {
-      if (chance(0.35)) cols.add("what-else");
-    }
-    if (cols.size === 0) cols.add(pick(COLLECTIONS).id);
-
-    // keep it to at most 3 collections so composition stays legible
-    img.collections = Array.from(cols).slice(0, 3);
   });
 
   function formatDate(d) {

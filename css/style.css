@@ -33,6 +33,7 @@ button {
   font-family: inherit;
   letter-spacing: inherit;
   cursor: pointer;
+  border-radius: 3px;
 }
 
 /* ---------------- layout shell ---------------- */
