@@ -81,7 +81,7 @@
     nav.innerHTML = '<div class="nav-label">collections</div>';
     collections.forEach((col) => {
       const cover = coverFor(col.id);
-      const { title, tag } = splitTitle(col.name);
+      const { title, tag } = splitTitle(col.name.toLowerCase());
       const btn = document.createElement("button");
       btn.className = "nav-item";
       btn.dataset.collection = col.id;
@@ -106,11 +106,11 @@
     const countEl = document.getElementById("collection-count");
     const blurbEl = document.getElementById("collection-blurb");
     if (state.collectionId === "all") {
-      titleEl.textContent = "All Photos";
+      titleEl.textContent = "all photos";
       blurbEl.textContent = "";
     } else {
       const col = collections.find((c) => c.id === state.collectionId);
-      titleEl.textContent = col.name;
+      titleEl.textContent = col.name.toLowerCase();
       blurbEl.textContent = "";
     }
     countEl.textContent = count + (count === 1 ? " image" : " images");
