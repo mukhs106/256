@@ -1,18 +1,32 @@
 /* ------------------------------------------------------------------
    data.js
-   Builds the camera-roll list from the real files in /images, with
-   placeholder metadata and folder/collection assignments layered on
-   top (until real captions/dates/etc. replace them).
+   Builds the camera-roll list from the real files in /images.
+
+   Everything a person edits by hand lives in three places below:
+     1. COLLECTIONS      — collection names + each collection's cover image
+     2. LIBRARY_COVER     — the cover image for the main "library" view
+     3. METADATA          — one object per photo: caption, source,
+                             location, date, kept-because, returned-to,
+                             connection, type, and which collections it
+                             belongs to
+
+   Nothing else in this file needs to change to add real
+   captions/dates/etc. — just fill in the fields below. Leave a field as
+   "" if you haven't written it yet; it will simply show up blank.
+
+   A small amount of *internal* randomness remains (hue/mood/subject/
+   texture, card size, rotation) — it drives the wander layout and the
+   "same mood" / "same subject" style suggestions in the isolation view,
+   and is never shown to the viewer as metadata, so it's left alone.
 
    The rest of the app only depends on the shape of APP_DATA below —
-   swap in more files or real metadata without touching app.js.
+   swap in more files or edit metadata without touching app.js.
 ------------------------------------------------------------------- */
 
 (function () {
 
-  // Seeded RNG so the *data* (placeholder metadata, which photo lives
-  // in which collection) is stable across reloads — only the wander
-  // layout re-randomizes on shuffle.
+  // Seeded RNG so the *internal* layout/association values are stable
+  // across reloads — only the wander layout re-randomizes on shuffle.
   function mulberry32(seed) {
     return function () {
       seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -25,7 +39,6 @@
   const rand = (min, max) => min + rng() * (max - min);
   const randInt = (min, max) => Math.floor(rand(min, max + 1));
   const pick = (arr) => arr[Math.floor(rng() * arr.length)];
-  const chance = (p) => rng() < p;
 
   // The actual photos, dropped into /images.
   const FILES = [
@@ -46,96 +59,1011 @@
     "IMG_85.jpeg",
   ];
 
-  // Internal tags — placeholder, used to drive the association logic
-  // in the isolation view (not shown directly as metadata).
+  // Internal tags — not shown as metadata, used only to drive the
+  // "same mood" / "same subject" / "same texture" association logic in
+  // the isolation view.
   const MOODS = ["quiet", "giddy", "tired", "cozy", "overstimulated", "nostalgic", "curious", "bored", "proud", "calm"];
   const SUBJECTS = ["hands", "sky", "food", "street", "plant", "screen", "pet", "reflection", "crowd", "object", "water", "light", "text", "shadow", "self", "sign"];
   const TEXTURES = ["grainy", "smooth", "blurry", "sharp", "warm", "cool", "dark", "bright", "soft", "harsh"];
 
-  // Displayed metadata vocab — all placeholder for now.
-  const SOURCES = ["iPhone 13", "iPhone 15", "screenshot", "downloaded", "sent by a friend", "scanned print", "old phone, recovered", "borrowed camera", "group chat"];
-  const LOCATIONS = ["kitchen counter", "train, somewhere", "4:02am", "friend's couch", "waiting room", "unknown", "the walk home", "backseat", "windowsill", "half asleep", "before the show", "after the rain", "not sure, honestly", "second floor"];
-  const KEPT_BECAUSE = ["the color", "the light", "didn't want to lose it", "reminded me of something", "no reason", "the composition, maybe", "a feeling", "in case I forgot", "it felt important then", "still not sure", "the way it was framed", "a joke only I remember"];
-  const CONNECTIONS = ["a color I keep noticing", "the same kind of light", "an object I can't place", "a shape that repeats", "someone else's hands", "a feeling more than a subject", "the same time of day", "an old habit", "something almost familiar", "a texture, not a subject", "no clear reason", "a detail I followed"];
-
+  // ------------------------------------------------------------------
+  // EDIT ME — collections + their cover images.
+  // `cover` is a filename from /images, used as this collection's
+  // thumbnail in the sidebar. Change it to whichever photo should
+  // represent the collection.
+  // ------------------------------------------------------------------
   const COLLECTIONS = [
-    { id: "just-see", name: "JUST SEE WHAT HAPPENS [EXPERIMENTATION]" },
-    { id: "make-into", name: "MAKE IT INTO SOMETHING ELSE [IMAGINATION]" },
-    { id: "no-point", name: "NO POINT [?]" },
-    { id: "play-rules", name: "PLAY WITH THE RULES [BENDING SYSTEMS]" },
-    { id: "lose-track", name: "LOSE TRACK OF TIME [ABSORPTION]" },
-    { id: "play-together", name: "PLAY TOGETHER [SOCIAL PLAY]" },
-    { id: "what-else", name: "WHAT ELSE COULD IT BE? [POSSIBILITY]" },
+    { id: "just-see", name: "JUST SEE WHAT HAPPENS [EXPERIMENTATION]", cover: "IMG_017.jpeg" },
+    { id: "make-into", name: "MAKE IT INTO SOMETHING ELSE [IMAGINATION]", cover: "IMG_03.jpeg" },
+    { id: "no-point", name: "NO POINT [?]", cover: "IMG_04.jpeg" },
+    { id: "play-rules", name: "PLAY WITH THE RULES [BENDING SYSTEMS]", cover: "IMG_08.jpeg" },
+    { id: "lose-track", name: "LOSE TRACK OF TIME [ABSORPTION]", cover: "IMG_01.jpeg" },
+    { id: "play-together", name: "PLAY TOGETHER [SOCIAL PLAY]", cover: "IMG_13.jpeg" },
+    { id: "what-else", name: "WHAT ELSE COULD IT BE? [POSSIBILITY]", cover: "IMG_19.jpeg" },
   ];
 
-  // ---- real curated data: which numbered photo goes where ----
-  // Expands a spec like "1, 2, 22-29, 31-69" into [1, 2, 22, 23, ..., 69].
-  function expand(spec) {
-    const out = [];
-    spec.split(",").forEach((part) => {
-      part = part.trim();
-      if (!part) return;
-      if (part.includes("-")) {
-        const [a, b] = part.split("-").map((n) => parseInt(n, 10));
-        for (let n = a; n <= b; n++) out.push(n);
-      } else {
-        out.push(parseInt(part, 10));
-      }
-    });
-    return out;
-  }
+  // EDIT ME — cover image for the main "library" (all photos) view.
+  const LIBRARY_COVER = "IMG_01.jpeg";
 
-  const PRIMARY_NUMBERS = new Set(expand("1, 2, 3, 6, 14, 17, 18, 22-29, 31-69, 73, 74, 78-80"));
-  const SECONDARY_NUMBERS = new Set(expand("4, 5, 7-13, 15, 16, 19-21, 30, 70-72, 75-77, 81-84"));
-
-  const CATEGORY_NUMBERS = {
-    "just-see": expand("2, 7, 9, 11, 12, 15, 17, 18, 26, 30, 33, 35, 38, 43, 44, 50, 51, 58, 60, 61, 63, 67, 69"),
-    "make-into": expand("3, 7, 8, 9, 15, 26, 48, 50, 53, 66, 69, 72, 76, 77, 83, 84"),
-    "no-point": expand("4, 5, 7, 10, 12, 16, 20, 33, 34, 36, 39, 40, 52, 55, 59, 62, 65, 73, 79, 80"),
-    "play-rules": expand("4, 8, 15, 30, 43, 51, 61, 63, 66, 69, 75, 76, 82, 83, 84"),
-    "lose-track": expand("1, 3, 6, 18, 20, 22, 23, 24, 25, 27, 29, 31, 39, 40, 41, 44, 46, 54, 55, 57, 60, 65, 67, 80, 81"),
-    "play-together": expand("1, 13, 14, 21, 24, 28, 32, 37, 40, 41, 42, 45, 46, 47, 48, 49, 52, 53, 56, 57, 62, 68, 70, 71, 74, 75, 78, 81, 83"),
-    "what-else": expand("4, 7, 8, 10, 19, 26, 58, 61, 77"),
+  // ------------------------------------------------------------------
+  // EDIT ME — per-photo metadata, keyed by filename.
+  // Every field is a plain string ("" if not filled in yet).
+  //   caption      — a line about the photo
+  //   type         — "primary" or "secondary" (one dot vs two on the card)
+  //   source       — where it came from (e.g. "iPhone 13", "screenshot")
+  //   location     — where/when it was taken (e.g. "kitchen counter")
+  //   date         — e.g. "Jun 3, 2024" (shown as typed, also used to
+  //                  find photos from "around the same time")
+  //   keptBecause  — why it's still around
+  //   returnedTo   — how often you've come back to it (e.g. "3 times")
+  //   connection   — what it reminds you of / what it's connected to
+  //   collections  — array of collection ids (from COLLECTIONS above)
+  //                  this photo belongs to; [] if none
+  // ------------------------------------------------------------------
+  const METADATA = {
+    "IMG_01.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_017.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see"],
+    },
+    "IMG_018.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "lose-track"],
+    },
+    "IMG_02.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see"],
+    },
+    "IMG_03.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "lose-track"],
+    },
+    "IMG_04.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "play-rules", "what-else"],
+    },
+    "IMG_05.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_06.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_07.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into", "no-point", "what-else"],
+    },
+    "IMG_08.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-rules", "what-else"],
+    },
+    "IMG_09.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into"],
+    },
+    "IMG_10.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "what-else"],
+    },
+    "IMG_11.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see"],
+    },
+    "IMG_12.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "no-point"],
+    },
+    "IMG_13.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_14.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_15.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into", "play-rules"],
+    },
+    "IMG_16.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_19.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["what-else"],
+    },
+    "IMG_20.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track"],
+    },
+    "IMG_21.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_22.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_23.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_24.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_25.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_26.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into", "what-else"],
+    },
+    "IMG_27.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_28.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_29.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_30.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "play-rules"],
+    },
+    "IMG_31.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_32.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_33.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "no-point"],
+    },
+    "IMG_34.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_35.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see"],
+    },
+    "IMG_36.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_37.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_38.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see"],
+    },
+    "IMG_39.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track"],
+    },
+    "IMG_40.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track", "play-together"],
+    },
+    "IMG_41.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_42.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_43.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "play-rules"],
+    },
+    "IMG_44.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "lose-track"],
+    },
+    "IMG_45.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_46.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_47.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_48.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-together"],
+    },
+    "IMG_49.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_50.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into"],
+    },
+    "IMG_51.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "play-rules"],
+    },
+    "IMG_52.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "play-together"],
+    },
+    "IMG_53.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-together"],
+    },
+    "IMG_54.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track"],
+    },
+    "IMG_55.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track"],
+    },
+    "IMG_56.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_57.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_58.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "what-else"],
+    },
+    "IMG_59.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_60.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "lose-track"],
+    },
+    "IMG_61.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "play-rules", "what-else"],
+    },
+    "IMG_62.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "play-together"],
+    },
+    "IMG_63.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "play-rules"],
+    },
+    "IMG_64.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: [],
+    },
+    "IMG_65.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track"],
+    },
+    "IMG_66.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-rules"],
+    },
+    "IMG_67.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "lose-track"],
+    },
+    "IMG_68.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_69.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["just-see", "make-into", "play-rules"],
+    },
+    "IMG_70.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_71.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_72.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into"],
+    },
+    "IMG_73.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_74.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_75.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-rules", "play-together"],
+    },
+    "IMG_76.webp": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-rules"],
+    },
+    "IMG_77.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "what-else"],
+    },
+    "IMG_78.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-together"],
+    },
+    "IMG_79.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point"],
+    },
+    "IMG_80.jpeg": {
+      caption: "",
+      type: "primary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["no-point", "lose-track"],
+    },
+    "IMG_81.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["lose-track", "play-together"],
+    },
+    "IMG_82.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["play-rules"],
+    },
+    "IMG_83.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-rules", "play-together"],
+    },
+    "IMG_84.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: ["make-into", "play-rules"],
+    },
+    "IMG_85.jpeg": {
+      caption: "",
+      type: "secondary",
+      source: "",
+      location: "",
+      date: "",
+      keptBecause: "",
+      returnedTo: "",
+      connection: "",
+      collections: [],
+    },
   };
 
-  // filename -> its number (e.g. "IMG_017.jpeg" -> 17), so the specs
-  // above (which use plain numbers) can be matched to real files.
-  function numberFromFile(file) {
-    const m = file.match(/(\d+)/);
-    return m ? parseInt(m[1], 10) : null;
-  }
-
-  const collectionsByNumber = {};
-  Object.entries(CATEGORY_NUMBERS).forEach(([colId, nums]) => {
-    nums.forEach((n) => {
-      (collectionsByNumber[n] = collectionsByNumber[n] || []).push(colId);
-    });
-  });
+  // ---------------------------------------------------------------
+  // Below this line is app wiring — no need to edit for new photos or
+  // metadata, only if the shape of the data itself changes.
+  // ---------------------------------------------------------------
 
   const images = FILES.map((file, i) => {
-    const num = numberFromFile(file);
+    const meta = METADATA[file] || {};
+
+    // Internal-only: card size + aspect placeholder (real aspect ratio
+    // fills in once the image loads, see app.js preloadDimensions()).
+    // Kept small overall, and large photos capped closer to medium so
+    // the canvas stays airy rather than dominated by a few big cards.
     const sizeRoll = rng();
-    const sizeBucket = sizeRoll < 0.32 ? "small" : sizeRoll < 0.72 ? "medium" : "large";
-    // Target long edge for the card — actual w/h get filled in once the
-    // real image dimensions are known (see app.js preloadDimensions()).
-    const baseLong = sizeBucket === "small" ? randInt(110, 145) : sizeBucket === "medium" ? randInt(150, 200) : randInt(210, 275);
+    const sizeBucket = sizeRoll < 0.36 ? "small" : sizeRoll < 0.76 ? "medium" : "large";
+    const baseLong = sizeBucket === "small" ? randInt(85, 115) : sizeBucket === "medium" ? randInt(120, 155) : randInt(160, 200);
 
-    const daysAgo = Math.round(Math.pow(rng(), 1.6) * 720);
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    const hour = randInt(0, 23);
-    date.setHours(hour, randInt(0, 59), 0, 0);
-
-    const returnedToCount = Math.floor(Math.pow(rng(), 2) * 11);
-    const returnedTo = returnedToCount === 0 ? "not yet" : returnedToCount === 1 ? "once" : `${returnedToCount} times`;
+    const parsedDate = meta.date ? new Date(meta.date) : null;
+    const hasDate = parsedDate && !isNaN(parsedDate);
 
     return {
       id: "img-" + i,
       index: i,
       file,
-      code: "IMG_" + String(1000 + randInt(0, 8999)),
+      code: file.replace(/\.[a-z0-9]+$/i, ""), // display name — the filename itself, no randomness
 
-      // internal placeholder tags (association logic + collections only)
+      // internal-only tags (association logic + wander layout only)
       hue: randInt(0, 359),
       mood: pick(MOODS),
       subject: pick(SUBJECTS),
@@ -144,26 +1072,20 @@
       baseLong, sizeBucket,
       w: baseLong, h: baseLong, // provisional square box until real dimensions load
 
-      // displayed metadata (placeholder — real captions/dates go here later)
-      type: PRIMARY_NUMBERS.has(num) ? "primary" : SECONDARY_NUMBERS.has(num) ? "secondary" : "secondary",
-      keptBecause: pick(KEPT_BECAUSE),
-      source: pick(SOURCES),
-      location: pick(LOCATIONS),
-      dateLabel: formatDate(date),
-      date,
-      returnedTo, returnedToCount,
-      connection: pick(CONNECTIONS),
+      // manually-edited, displayed metadata (see METADATA above)
+      caption: meta.caption || "",
+      type: meta.type || "secondary",
+      keptBecause: meta.keptBecause || "",
+      source: meta.source || "",
+      location: meta.location || "",
+      dateLabel: meta.date || "",
+      date: hasDate ? parsedDate : null,
+      returnedTo: meta.returnedTo || "",
+      connection: meta.connection || "",
 
-      isColorful: chance(0.3),
-      significance: rng(),
-      collections: collectionsByNumber[num] || [],
+      collections: meta.collections || [],
     };
   });
 
-  function formatDate(d) {
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-  }
-
-  window.APP_DATA = { images, collections: COLLECTIONS };
+  window.APP_DATA = { images, collections: COLLECTIONS, libraryCover: LIBRARY_COVER };
 })();

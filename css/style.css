@@ -1,8 +1,10 @@
 /* ------------------------------------------------------------------
    256 — a camera roll, mostly
-   Placeholder visual language: pure white ground, black type, a
-   spaced-out scattered library, restrained metadata, associative
-   isolation view.
+   Visual language: white ground, black ink, a playful display face
+   (Barriecito) for headings/titles/captions against a quiet Inter body,
+   a spaced-out scattered library, and a yellow interaction accent —
+   the one spot of color, reserved for hover states, tying back to the
+   idea of a highlighter dragged across something worth a second look.
 ------------------------------------------------------------------- */
 
 :root {
@@ -13,7 +15,15 @@
   --line: #e8e8e8;
   --card-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.08);
   --sidebar-w: 240px;
-  --font: Helvetica, Arial, sans-serif;
+
+  /* type */
+  --font-display: "Barriecito", "Comic Sans MS", cursive;
+  --font-body: "Inter", Helvetica, Arial, sans-serif;
+  --font: var(--font-body); /* legacy alias */
+
+  /* the one accent color, used only for hover */
+  --yellow: #ffcc00;
+  --yellow-hover: rgba(255, 204, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -24,8 +34,9 @@ html, body {
   height: 100%;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font);
-  letter-spacing: -0.015em;
+  font-family: var(--font-body);
+  font-size: 15px;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -34,6 +45,7 @@ button {
   letter-spacing: inherit;
   cursor: pointer;
   border-radius: 3px;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
 /* ---------------- layout shell ---------------- */
@@ -59,6 +71,11 @@ button {
   color: var(--ink);
 }
 
+.sidebar-toggle:hover {
+  background-color: var(--yellow-hover);
+  border-color: var(--ink);
+}
+
 /* ---------------- sidebar ---------------- */
 
 .sidebar {
@@ -69,7 +86,7 @@ button {
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
-  padding-bottom: 300px;
+  padding-bottom: 320px;
   overflow-y: auto;
 }
 
@@ -83,14 +100,20 @@ button {
 }
 
 .brand-name {
-  font-weight: 700;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--ink);
 }
 
 .brand-sub {
+  font-family: var(--font-body);
   font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--ink-faint);
-  margin-top: 3px;
+  margin-top: 5px;
 }
 
 .nav-section {
@@ -98,9 +121,13 @@ button {
 }
 
 .nav-label {
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-faint);
-  padding: 0 8px 6px;
+  padding: 0 8px 7px;
 }
 
 .nav-item {
@@ -111,14 +138,17 @@ button {
   border: none;
   background: transparent;
   color: var(--ink-soft);
+  font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 500;
   padding: 7px 8px;
   text-align: left;
   line-height: 1.3;
 }
 
 .nav-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background-color: var(--yellow-hover);
+  color: var(--ink);
 }
 
 .nav-item.active {
@@ -152,7 +182,8 @@ button {
 
 .nav-item-tag {
   display: block;
-  font-size: 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
   color: var(--ink-faint);
 }
 
@@ -164,14 +195,18 @@ button {
   border: 1px dashed var(--line);
   background: transparent;
   color: var(--ink-soft);
+  font-family: var(--font-body);
   font-size: 12px;
-  padding: 6px 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 7px 10px;
   width: 100%;
 }
 
 .shuffle-btn:hover {
   border-color: var(--ink);
   color: var(--ink);
+  background-color: var(--yellow-hover);
 }
 
 /* ---------------- main ---------------- */
@@ -196,7 +231,7 @@ button {
   justify-content: space-between;
   gap: 16px;
   padding: 22px 28px 0;
-  height: 100px;
+  height: 108px;
   background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 35%, rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
   flex-wrap: wrap;
@@ -205,24 +240,36 @@ button {
 .toolbar-left {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  max-width: 38%;
+  min-width: 0;
 }
 
 .collection-title {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 26px;
   margin: 0;
   font-weight: 400;
-  color: var(--ink-faint);
+  line-height: 1.15;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .collection-blurb {
+  font-family: var(--font-body);
   font-size: 12px;
   color: var(--ink-faint);
   font-style: italic;
 }
 
 .collection-count {
-  font-size: 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--ink-faint);
   text-align: right;
   white-space: nowrap;
@@ -232,7 +279,7 @@ button {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 76px 20px 60px;
+  padding: 82px 20px 60px;
 }
 
 .canvas {
@@ -269,6 +316,7 @@ button {
 
 .photo-card:hover .photo-frame {
   box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12);
+  outline-color: var(--yellow);
 }
 
 .photo-caption {
@@ -276,8 +324,11 @@ button {
   display: flex;
   align-items: baseline;
   gap: 5px;
-  font-size: 10px;
-  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -301,19 +352,35 @@ button {
   left: 0;
   bottom: 0;
   width: var(--sidebar-w);
-  height: 208px;
+  height: 240px;
   background: var(--paper);
   color: var(--ink);
-  padding: 16px 14px;
+  padding: 14px 14px 16px;
   font-size: 11.5px;
   z-index: 2000;
   overflow: hidden;
+  border-top: 2px solid var(--ink);
+  border-right: 1px solid var(--line);
+  box-shadow: 0 -6px 18px -12px rgba(0, 0, 0, 0.25);
+}
+
+.meta-caption {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--ink);
+  min-height: 19px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .meta-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .meta-field {
@@ -326,13 +393,19 @@ button {
 
 .meta-key {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .meta-val {
   flex: 1 1 auto;
-  font-size: 11.5px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -365,10 +438,14 @@ button {
   color: var(--ink);
   font-size: 18px;
   opacity: 0.6;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
 }
 
 .isolation-close:hover {
   opacity: 1;
+  background-color: var(--yellow-hover);
 }
 
 .isolation-trail {
@@ -389,6 +466,10 @@ button {
   background-color: var(--line);
   background-size: cover;
   background-position: center;
+}
+
+.trail-dot:hover {
+  box-shadow: 0 0 0 4px var(--yellow-hover);
 }
 
 .trail-dot.current {
@@ -433,14 +514,16 @@ button {
   background: transparent;
   border: none;
   color: var(--ink-soft);
+  font-family: var(--font-body);
   font-size: 10.5px;
+  font-weight: 500;
   text-align: center;
-  padding: 4px;
+  padding: 6px;
 }
 
 .path-thumb {
-  width: 62px;
-  height: 62px;
+  width: 52px;
+  height: 52px;
   background-color: var(--line);
   background-size: cover;
   background-position: center;
@@ -454,10 +537,12 @@ button {
 
 .path-btn:hover {
   color: var(--ink);
+  background-color: var(--yellow-hover);
 }
 
 .isolation-hint {
   margin-top: 20px;
+  font-family: var(--font-body);
   font-size: 11px;
   color: var(--ink-faint);
   text-align: center;
@@ -481,7 +566,15 @@ button {
     transform: translateX(0);
   }
 
-  .toolbar { padding-left: 56px; }
+  .toolbar { padding-left: 56px; height: 92px; }
+
+  .toolbar-left { max-width: 52%; }
+
+  .collection-title { font-size: 17px; }
+
+  .brand-name { font-size: 19px; }
+
+  .brand-sub { font-size: 9.5px; }
 
   .isolation-stage {
     flex-direction: column;

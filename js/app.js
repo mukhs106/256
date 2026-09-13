@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, collections } = window.APP_DATA;
+  const { images, collections, libraryCover } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -46,9 +46,21 @@
     return m ? { title: m[1], tag: m[2] } : { title: name, tag: "" };
   }
 
-  function coverFor(collectionId) {
-    const member = images.find((im) => im.collections.includes(collectionId));
+  // Each collection's cover comes from its own `cover` field in data.js
+  // (a filename). Falls back to the first member photo, then the first
+  // photo overall, if a cover hasn't been set or doesn't match a file.
+  function coverFor(col) {
+    if (col.cover) {
+      const byFile = images.find((im) => im.file === col.cover);
+      if (byFile) return byFile;
+    }
+    const member = images.find((im) => im.collections.includes(col.id));
     return member || images[0];
+  }
+
+  function libraryCoverImage() {
+    const byFile = libraryCover && images.find((im) => im.file === libraryCover);
+    return byFile || images[0];
   }
 
   // ---------- preload real image dimensions ----------
@@ -74,13 +86,13 @@
   // ---------- sidebar ----------
 
   function renderSidebar() {
-    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
+    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(libraryCoverImage())}')`;
     document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
 
     const nav = document.getElementById("collections-nav");
     nav.innerHTML = '<div class="nav-label">collections</div>';
     collections.forEach((col) => {
-      const cover = coverFor(col.id);
+      const cover = coverFor(col);
       const { title, tag } = splitTitle(col.name.toLowerCase());
       const btn = document.createElement("button");
       btn.className = "nav-item";
@@ -162,7 +174,7 @@
 
   function layoutWander(container, imgs) {
     const width = container.clientWidth || 900;
-    const colWidth = width < 640 ? 175 : width < 1000 ? 210 : 245;
+    const colWidth = width < 640 ? 135 : width < 1000 ? 160 : 185;
     const cols = Math.max(2, Math.floor(width / colWidth));
     const actualColWidth = width / cols;
     const colHeights = new Array(cols).fill(0);
@@ -221,6 +233,7 @@
   // ---------- metadata panel (docked to the bottom of the sidebar) ----------
 
   function setMetaPanel(img) {
+    document.getElementById("meta-caption").textContent = img ? img.caption : "";
     document.getElementById("meta-name").textContent = img ? img.code : "";
     document.getElementById("meta-type").textContent = img ? img.type : "";
     document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
@@ -267,8 +280,12 @@
     const byMood = takeMatching((i) => i.mood === img.mood);
     const bySubject = takeMatching((i) => i.subject === img.subject);
     const byTexture = takeMatching((i) => i.texture === img.texture);
-    const byReason = takeMatching((i) => i.keptBecause === img.keptBecause);
-    const byTime = takeBest((i) => Math.abs(i.date - img.date));
+    const byReason = img.keptBecause
+      ? takeMatching((i) => i.keptBecause === img.keptBecause)
+      : null;
+    const byTime = img.date
+      ? takeBest((i) => (i.date ? Math.abs(i.date - img.date) : Infinity))
+      : null;
 
     return [
       { label: "same color", image: byColor },
@@ -343,9 +360,9 @@
     stage.src = imgUrl(img);
 
     const aspect = img.w / img.h;
-    const maxW = Math.min(window.innerWidth * 0.5, 520);
-    const maxH = Math.min(window.innerHeight * 0.56, 480);
-    let dispW = Math.min(420, maxW);
+    const maxW = Math.min(window.innerWidth * 0.4, 420);
+    const maxH = Math.min(window.innerHeight * 0.46, 380);
+    let dispW = Math.min(340, maxW);
     let dispH = dispW / aspect;
     if (dispH > maxH) { dispH = maxH; dispW = dispH * aspect; }
     if (dispW > maxW) { dispW = maxW; dispH = dispW / aspect; }
