@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, collections } = window.APP_DATA;
+  const { images, collections, libraryCover } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -17,11 +17,6 @@
 
   function imgUrl(img) {
     return "images/" + img.file;
-  }
-
-  function hueDist(a, b) {
-    const d = Math.abs(a - b) % 360;
-    return d > 180 ? 360 - d : d;
   }
 
   function pickBest(list, scoreFn, higherIsBetter) {
@@ -46,9 +41,28 @@
     return m ? { title: m[1], tag: m[2] } : { title: name, tag: "" };
   }
 
+  // Find an image by its filename (used to resolve manually-set cover
+  // images) — returns null if not set or not found.
+  function findByFile(file) {
+    if (!file) return null;
+    return images.find((im) => im.file === file) || null;
+  }
+
+  // A collection's sidebar thumbnail: uses its manually-set `cover`
+  // filename when present, otherwise falls back to the first photo
+  // found in that collection (the previous automatic behavior).
   function coverFor(collectionId) {
+    const col = collections.find((c) => c.id === collectionId);
+    const manual = col ? findByFile(col.cover) : null;
+    if (manual) return manual;
     const member = images.find((im) => im.collections.includes(collectionId));
     return member || images[0];
+  }
+
+  // The main "Library" nav item's thumbnail: manually-set LIBRARY_COVER
+  // (from data.js), falling back to the first photo overall.
+  function libraryCoverImage() {
+    return findByFile(libraryCover) || images[0];
   }
 
   // ---------- preload real image dimensions ----------
@@ -74,7 +88,7 @@
   // ---------- sidebar ----------
 
   function renderSidebar() {
-    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(images[0])}')`;
+    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(libraryCoverImage())}')`;
     document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
 
     const nav = document.getElementById("collections-nav");
@@ -222,6 +236,7 @@
 
   function setMetaPanel(img) {
     document.getElementById("meta-name").textContent = img ? img.code : "";
+    document.getElementById("meta-caption").textContent = img ? img.caption : "";
     document.getElementById("meta-type").textContent = img ? img.type : "";
     document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
     document.getElementById("meta-source").textContent = img ? img.source : "";
@@ -263,19 +278,18 @@
       return pick;
     }
 
-    const byColor = takeBest((i) => hueDist(i.hue, img.hue));
-    const byMood = takeMatching((i) => i.mood === img.mood);
-    const bySubject = takeMatching((i) => i.subject === img.subject);
-    const byTexture = takeMatching((i) => i.texture === img.texture);
-    const byReason = takeMatching((i) => i.keptBecause === img.keptBecause);
-    const byTime = takeBest((i) => Math.abs(i.date - img.date));
+    // Associations are built only from real, manually-edited metadata
+    // (no internal/randomized tags) — so they get more meaningful as
+    // that metadata is filled in, and simply drop out while it's blank.
+    const byReason = img.keptBecause ? takeMatching((i) => i.keptBecause && i.keptBecause === img.keptBecause) : null;
+    const bySource = img.source ? takeMatching((i) => i.source && i.source === img.source) : null;
+    const byLocation = img.location ? takeMatching((i) => i.location && i.location === img.location) : null;
+    const byTime = img.date ? takeBest((i) => i.date ? Math.abs(i.date - img.date) : Infinity) : null;
 
     return [
-      { label: "same color", image: byColor },
-      { label: "same mood — " + img.mood, image: byMood },
-      { label: "same subject — " + img.subject, image: bySubject },
-      { label: "same texture — " + img.texture, image: byTexture },
       { label: "kept for a similar reason", image: byReason },
+      { label: "same source", image: bySource },
+      { label: "same location", image: byLocation },
       { label: "around the same time", image: byTime },
     ].filter((p) => p.image);
   }

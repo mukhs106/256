@@ -13,7 +13,9 @@
   --line: #e8e8e8;
   --card-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.08);
   --sidebar-w: 240px;
-  --font: Helvetica, Arial, sans-serif;
+  --font: "Inter", Helvetica, Arial, sans-serif;
+  --font-display: "Barriecito", "Inter", Helvetica, Arial, sans-serif;
+  --hover-yellow: rgba(255, 209, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -34,6 +36,11 @@ button {
   letter-spacing: inherit;
   cursor: pointer;
   border-radius: 3px;
+}
+
+/* All interactive buttons get the same yellow hover tint. */
+button:hover {
+  background-color: var(--hover-yellow);
 }
 
 /* ---------------- layout shell ---------------- */
@@ -83,8 +90,8 @@ button {
 }
 
 .brand-name {
-  font-weight: 700;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 22px;
 }
 
 .brand-sub {
@@ -118,13 +125,17 @@ button {
 }
 
 .nav-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover-yellow);
 }
 
 .nav-item.active {
   background: rgba(0, 0, 0, 0.07);
   color: var(--ink);
   font-weight: 700;
+}
+
+.nav-item.active:hover {
+  background: var(--hover-yellow);
 }
 
 .nav-item-preview {
@@ -172,6 +183,7 @@ button {
 .shuffle-btn:hover {
   border-color: var(--ink);
   color: var(--ink);
+  background-color: var(--hover-yellow);
 }
 
 /* ---------------- main ---------------- */
@@ -301,11 +313,12 @@ button {
   left: 0;
   bottom: 0;
   width: var(--sidebar-w);
-  height: 208px;
+  height: 232px;
   background: var(--paper);
   color: var(--ink);
   padding: 16px 14px;
   font-size: 11.5px;
+  border: 1.5px solid var(--ink);
   z-index: 2000;
   overflow: hidden;
 }
@@ -369,6 +382,7 @@ button {
 
 .isolation-close:hover {
   opacity: 1;
+  background-color: var(--hover-yellow);
 }
 
 .isolation-trail {
@@ -454,6 +468,7 @@ button {
 
 .path-btn:hover {
   color: var(--ink);
+  background-color: var(--hover-yellow);
 }
 
 .isolation-hint {
