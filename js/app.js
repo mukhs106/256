@@ -100,6 +100,49 @@
     renderCanvas();
   }
 
+  // ---------- mode switching (symbol nav -> ModeManager) ----------
+  // Which symbol maps to which mode lives entirely in MODE_CONFIG
+  // (js/modes-config.js) as symbol_1..symbol_6, in the same left-to-
+  // right order as the .nav-symbol elements in index.html. This code
+  // never hard-codes a mode id — it just looks up "symbol_" + (index+1)
+  // and hands whatever it finds to ModeManager.
+
+  function modeIdForSymbolIndex(i) {
+    const key = "symbol_" + (i + 1);
+    return (window.MODE_CONFIG && window.MODE_CONFIG[key]) || null;
+  }
+
+  function setActiveSymbolUI(activeIndex) {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      const isActive = i === activeIndex;
+      sym.classList.toggle("active", isActive);
+      sym.setAttribute("aria-pressed", String(isActive));
+    });
+  }
+
+  // Clicking the symbol for the mode that's already active turns it
+  // back off (plain archive, no symbol marked active) rather than
+  // re-entering it — the reserved symbol (mapped to null) always lands
+  // here too, since it has no mode to turn on.
+  function handleSymbolActivate(i) {
+    const modeId = modeIdForSymbolIndex(i);
+    const turningOn = modeId && window.ModeManager.getActiveId() !== modeId;
+    window.ModeManager.activate(turningOn ? modeId : null);
+    setActiveSymbolUI(turningOn ? i : -1);
+  }
+
+  function wireModeSwitching() {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      sym.addEventListener("click", () => handleSymbolActivate(i));
+      sym.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleSymbolActivate(i);
+        }
+      });
+    });
+  }
+
   // ---------- card element ----------
 
   function makeCard(img) {
@@ -152,6 +195,7 @@
   let canvasWrapEl = null;
   let layout = null; // { width, cols, actualColWidth, colHeights, bottom, regions, imgs }
   let extending = false;
+  let autoExtendEnabled = true; // modes can pause the scroll-triggered region generation via ArchiveAPI.setAutoExtend
 
   function columnsFor(width) {
     const colWidth = width < 640 ? 135 : width < 1000 ? 160 : 185;
@@ -244,7 +288,7 @@
   // can't trigger overlapping runs, and by a hard iteration cap so an
   // empty/tiny collection can never loop forever.
   function extendCanvasIfNeeded() {
-    if (extending || !layout) return;
+    if (extending || !layout || !autoExtendEnabled) return;
     const remaining = () => layout.bottom - (canvasWrapEl.scrollTop + canvasWrapEl.clientHeight);
     if (remaining() >= EXTEND_BUFFER_PX) return;
 
@@ -502,6 +546,36 @@
     document.getElementById("info-btn").setAttribute("aria-expanded", "false");
   }
 
+  // ---------- mode system bridge ----------
+  // The curated surface every mode gets as ctx.archive. Modes read the
+  // archive and hook into it only through this object — never by
+  // reaching into app.js internals directly — so what a mode can touch
+  // stays deliberate and stable. getImages() returns the permanent,
+  // shared photo data (positions/metadata/collections all live on it);
+  // treat it as read-only, since every mode draws from the same list.
+  const ArchiveAPI = {
+    getImages() { return images; },
+    getCanvasEl() { return canvasEl; },
+    getCanvasWrapEl() { return canvasWrapEl; },
+    getCards() { return canvasEl ? Array.from(canvasEl.querySelectorAll(".photo-card")) : []; },
+    cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
+    openIsolation,
+    closeIsolation,
+    showMeta,
+    hideMeta,
+    setAutoExtend(on) { autoExtendEnabled = !!on; },
+    // The reset hook ModeManager calls on every mode switch, before the
+    // next mode (if any) enters: rebuilds the canvas straight from the
+    // permanent image data, discarding whatever the previous mode did
+    // to the DOM (dragged positions, temporary elements, added
+    // classes...) without ever touching that underlying data itself.
+    resetView() {
+      autoExtendEnabled = true;
+      renderCanvas();
+      hideMeta();
+    },
+  };
+
   // ---------- init ----------
 
   function debounce(fn, ms) {
@@ -518,6 +592,9 @@
     renderCanvas();
     renderSymbolLabels();
     hideMetaPanel();
+
+    window.ModeManager.configure(ArchiveAPI);
+    wireModeSwitching();
 
     canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
 

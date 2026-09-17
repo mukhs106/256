@@ -138,6 +138,15 @@ button {
   pointer-events: none;
 }
 
+/* Active mode indicator — same halo as hover, just left showing at
+   lower strength so the current symbol/mode stays legible without a
+   hover. Declared before the hover rule so hovering the active symbol
+   still reads as a full, normal hover on top of it. */
+.nav-symbol.active::before {
+  opacity: 0.55;
+  transform: scale(1);
+}
+
 .nav-symbol:hover::before,
 .nav-symbol:focus-visible::before {
   opacity: 1;
