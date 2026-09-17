@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, collections, libraryCover } = window.APP_DATA;
+  const { images, collections, libraryCover, symbolLabels } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -81,6 +81,36 @@
       probe.onerror = resolve; // keep the provisional square box
       probe.src = imgUrl(img);
     })));
+  }
+
+  // ---------- icon nav (category symbols) ----------
+  // Purely a label reveal for now — the symbols aren't wired to
+  // filtering yet, so this just pairs each static nav-symbol with its
+  // name from data.js, in order.
+
+  function renderSymbolLabels() {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      const label = sym.querySelector(".nav-symbol-label");
+      if (!label) return;
+      label.textContent = symbolLabels[i] || "";
+      const clamp = () => clampSymbolLabel(sym, label);
+      sym.addEventListener("mouseenter", clamp);
+      sym.addEventListener("focus", clamp);
+    });
+  }
+
+  // Long labels centered under a symbol near the left/right edge would
+  // otherwise get clipped by .main's overflow:hidden; nudge them inward
+  // via the --label-shift custom property (see style.css) instead.
+  function clampSymbolLabel(sym, label) {
+    label.style.setProperty("--label-shift", "0px");
+    const mainRect = document.querySelector(".main").getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+    const pad = 8;
+    let shift = 0;
+    if (labelRect.left < mainRect.left + pad) shift = (mainRect.left + pad) - labelRect.left;
+    else if (labelRect.right > mainRect.right - pad) shift = (mainRect.right - pad) - labelRect.right;
+    if (shift) label.style.setProperty("--label-shift", shift + "px");
   }
 
   // ---------- sidebar ----------
@@ -159,7 +189,7 @@
     caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
     el.appendChild(caption);
 
-    el.addEventListener("mouseenter", () => showMeta(img));
+    el.addEventListener("mouseenter", () => showMeta(img, frame));
     el.addEventListener("mouseleave", hideMeta);
     el.addEventListener("click", () => openIsolation(img));
     return el;
@@ -230,28 +260,83 @@
     layoutWander(canvas, imgs);
   }
 
-  // ---------- metadata panel (docked to the bottom of the sidebar) ----------
+  // ---------- metadata panel (a small floating note beside the selected image) ----------
+  // image name + type stay on the `img` object (used for captions and dot
+  // count elsewhere) but are intentionally not surfaced in this panel.
+  // kept/connection/returned are the primary, always-labeled fields;
+  // when/where/source are secondary and only appear when filled in, so
+  // they never compete with the primary three.
 
   function setMetaPanel(img) {
-    document.getElementById("meta-caption").textContent = img ? img.caption : "";
-    document.getElementById("meta-name").textContent = img ? img.code : "";
-    document.getElementById("meta-type").textContent = img ? img.type : "";
+    const caption = document.getElementById("meta-caption");
+    caption.textContent = img ? img.caption : "";
+    caption.hidden = !(img && img.caption);
+
     document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
-    document.getElementById("meta-source").textContent = img ? img.source : "";
-    document.getElementById("meta-when").textContent = img ? img.dateLabel : "";
-    document.getElementById("meta-where").textContent = img ? img.location : "";
-    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
     document.getElementById("meta-connection").textContent = img ? img.connection : "";
+    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
+
+    const secondary = [
+      ["meta-when-row", img && img.dateLabel, "meta-when", img && img.dateLabel],
+      ["meta-where-row", img && img.location, "meta-where", img && img.location],
+      ["meta-source-row", img && img.source, "meta-source", img && img.source],
+    ];
+    let anySecondary = false;
+    secondary.forEach(([rowId, has, valId, val]) => {
+      document.getElementById(rowId).hidden = !has;
+      document.getElementById(valId).textContent = val || "";
+      if (has) anySecondary = true;
+    });
+    document.getElementById("meta-secondary").hidden = !anySecondary;
   }
 
-  function showMeta(img) {
-    if (!document.getElementById("isolation").hidden) return;
+  // Places the floating panel just beside `targetEl` (a photo frame or the
+  // isolation stage image), clamped so it never runs off the viewport.
+  function positionMetaPanel(targetEl) {
+    const panel = document.getElementById("meta-panel");
+    const rect = targetEl.getBoundingClientRect();
+    const margin = 14;
+
+    panel.style.visibility = "hidden";
+    panel.classList.add("visible");
+    const pw = panel.offsetWidth;
+    const ph = panel.offsetHeight;
+
+    let left = rect.right + margin;
+    if (left + pw + margin > window.innerWidth) {
+      left = rect.left - pw - margin;
+    }
+    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+
+    let top = rect.top;
+    top = Math.max(margin, Math.min(top, window.innerHeight - ph - margin));
+
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+    panel.style.visibility = "";
+  }
+
+  // Does the actual work of showing the panel next to `targetEl`. Used
+  // directly by the isolation view (which manages its own open/closed
+  // state) and, guarded, by card hover below.
+  function applyMetaPanel(img, targetEl) {
     setMetaPanel(img);
+    if (targetEl) positionMetaPanel(targetEl);
+    document.getElementById("meta-panel").classList.add("visible");
+  }
+
+  function hideMetaPanel() {
+    document.getElementById("meta-panel").classList.remove("visible");
+  }
+
+  function showMeta(img, targetEl) {
+    if (!document.getElementById("isolation").hidden) return;
+    applyMetaPanel(img, targetEl);
   }
 
   function hideMeta() {
     if (!document.getElementById("isolation").hidden) return;
-    setMetaPanel(null);
+    hideMetaPanel();
   }
 
   // ---------- isolation view ----------
@@ -369,9 +454,9 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // Metadata for the isolated photo lives in the same corner dock as
-    // the hover metadata, not inline in the stage.
-    setMetaPanel(img);
+    // Metadata for the isolated photo floats beside the stage image,
+    // the same way it floats beside a hovered card in the canvas.
+    applyMetaPanel(img, stage);
 
     renderTrail();
     renderPaths(img);
@@ -388,7 +473,7 @@
     document.getElementById("isolation").hidden = true;
     state.trail = [];
     state.isolatedId = null;
-    setMetaPanel(null);
+    hideMetaPanel();
   }
 
   // ---------- sidebar toggle (mobile) ----------
@@ -397,6 +482,18 @@
     if (window.innerWidth <= 820) {
       document.getElementById("app").classList.remove("sidebar-open");
     }
+  }
+
+  // ---------- info panel ----------
+
+  function openInfoPanel() {
+    document.getElementById("info-panel").hidden = false;
+    document.getElementById("info-btn").setAttribute("aria-expanded", "true");
+  }
+
+  function closeInfoPanel() {
+    document.getElementById("info-panel").hidden = true;
+    document.getElementById("info-btn").setAttribute("aria-expanded", "false");
   }
 
   // ---------- init ----------
@@ -412,7 +509,8 @@
     renderSidebar();
     updateNavActive();
     renderCanvas();
-    setMetaPanel(null);
+    renderSymbolLabels();
+    hideMetaPanel();
 
     document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
 
@@ -428,7 +526,21 @@
       document.getElementById("app").classList.toggle("sidebar-open");
     });
 
-    window.addEventListener("resize", debounce(renderCanvas, 200));
+    document.getElementById("info-btn").addEventListener("click", () => {
+      document.getElementById("info-panel").hidden ? openInfoPanel() : closeInfoPanel();
+    });
+    document.getElementById("info-panel-close").addEventListener("click", closeInfoPanel);
+    document.addEventListener("click", (e) => {
+      const panel = document.getElementById("info-panel");
+      if (panel.hidden) return;
+      if (panel.contains(e.target) || e.target.id === "info-btn") return;
+      closeInfoPanel();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
+    });
+
+    window.addEventListener("resize", debounce(() => { renderCanvas(); hideMeta(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);
