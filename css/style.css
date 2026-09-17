@@ -201,18 +201,18 @@ button {
 .brand-name {
   font-family: var(--font-display);
   font-weight: var(--weight-medium);
-  font-size: 20px;
-  letter-spacing: 0.01em;
+  font-size: 28px;
+  letter-spacing: -0.08em;
   line-height: 1.1;
-  color: var(--ink);
+  color: #2F2965;
 }
 
 .brand-sub {
   font-family: var(--font-body);
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  color: var(--ink-faint);
-  margin-top: 5px;
+  font-size: 13px;
+  letter-spacing: -0.03em;
+  color: #2F2965;
+  margin-top: 2px;
 }
 
 /* ---------------- main ---------------- */
