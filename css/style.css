@@ -355,7 +355,11 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 5;
+  /* Comfortably above a photo card's max base z-index (10 + 40 random +
+     20 large-bonus = 70) — with genuinely open-ended scroll, some card
+     sits in the header's band at nearly every scroll position, and it
+     must fade under the header rather than paint over its text/icons. */
+  z-index: 80;
   display: flex;
   flex-direction: column;
   gap: 24px; /* leaves room for the symbol hover label between the two rows */

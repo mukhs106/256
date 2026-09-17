@@ -196,68 +196,146 @@
   }
 
   // ---------- layout ----------
-  // A single scattered composition: loosely packed, jittered, rotated,
-  // sized by each photo's real aspect ratio, with generous breathing
-  // room between images and only a rare, slight overlap.
-
+  // An open-ended scattered composition: instead of laying the whole
+  // collection out once into a fixed-height canvas, the canvas grows
+  // downward in "regions" — one freshly shuffled pass through the
+  // current collection each — generated as the user scrolls near the
+  // bottom. Older regions are pruned once enough newer ones exist, so
+  // wandering never hits a hard edge but the DOM stays bounded. Every
+  // region uses the exact same per-image placement math the original
+  // single-pass layout used (same jitter/rotation/sizing/gaps), just
+  // continuing from wherever the previous region's columns left off,
+  // so a loop through the set never looks identical to the one before.
+  //
+  // Tuning knobs, all in px/screens/count so they're easy to adjust:
   const CAPTION_H = 22; // approximate space the always-on caption takes below each photo
+  const EXTEND_BUFFER_PX = 1600; // start generating more once within this many px of the bottom
+  const MAX_LIVE_REGIONS = 4; // shuffled passes kept mounted at once; older ones are pruned
+  const INITIAL_FILL_SCREENS = 1.5; // viewport-heights of content to pre-fill on load/reset
 
-  function layoutWander(container, imgs) {
-    const width = container.clientWidth || 900;
+  let canvasEl = null;
+  let canvasWrapEl = null;
+  let layout = null; // { width, cols, actualColWidth, colHeights, bottom, regions, imgs }
+  let extending = false;
+
+  function columnsFor(width) {
     const colWidth = width < 640 ? 135 : width < 1000 ? 160 : 185;
     const cols = Math.max(2, Math.floor(width / colWidth));
-    const actualColWidth = width / cols;
-    const colHeights = new Array(cols).fill(0);
+    return { cols, actualColWidth: width / cols };
+  }
 
-    const order = imgs.slice();
+  function shuffledCopy(list) {
+    const order = list.slice();
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [order[i], order[j]] = [order[j], order[i]];
     }
+    return order;
+  }
 
-    order.forEach((img) => {
-      let col;
-      if (Math.random() < 0.85) {
-        col = colHeights.indexOf(Math.min(...colHeights));
-      } else {
-        col = Math.floor(Math.random() * cols);
-      }
-      const w = img.w, h = img.h;
-      const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.45);
-      let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
-      left = Math.max(10, Math.min(width - w - 10, left));
+  // Places one image within the running column layout — identical math
+  // to the original single-pass algorithm, just operating on layout
+  // state that now persists across regions instead of being local to
+  // one call. Mutates colHeights in place.
+  function placeImage(container, img, width, cols, actualColWidth, colHeights) {
+    let col;
+    if (Math.random() < 0.85) {
+      col = colHeights.indexOf(Math.min(...colHeights));
+    } else {
+      col = Math.floor(Math.random() * cols);
+    }
+    const w = img.w, h = img.h;
+    const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.45);
+    let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
+    left = Math.max(10, Math.min(width - w - 10, left));
 
-      let gap = 55 + Math.random() * 72;
-      if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
-      const top = Math.max(0, colHeights[col] + gap);
+    let gap = 55 + Math.random() * 72;
+    if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
+    const top = Math.max(0, colHeights[col] + gap);
 
-      const rotation = (Math.random() * 14 - 7).toFixed(1);
-      const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
+    const rotation = (Math.random() * 14 - 7).toFixed(1);
+    const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
 
-      const el = makeCard(img);
-      el.style.position = "absolute";
-      el.style.left = left + "px";
-      el.style.top = top + "px";
-      el.style.width = w + "px";
-      el.style.transform = `rotate(${rotation}deg)`;
-      el.style.zIndex = z;
-      el.querySelector(".photo-frame").style.height = h + "px";
-      container.appendChild(el);
+    const el = makeCard(img);
+    el.style.position = "absolute";
+    el.style.left = left + "px";
+    el.style.top = top + "px";
+    el.style.width = w + "px";
+    el.style.transform = `rotate(${rotation}deg)`;
+    el.style.zIndex = z;
+    el.querySelector(".photo-frame").style.height = h + "px";
+    container.appendChild(el);
 
-      colHeights[col] = top + h + CAPTION_H;
+    colHeights[col] = top + h + CAPTION_H;
+  }
+
+  // Lays out one freshly shuffled pass through the current collection,
+  // continuing downward from the layout's current column heights.
+  // Returns false (and does nothing) once there's nothing to lay out,
+  // so callers can use it as a loop condition without spinning forever.
+  // Deliberately does NOT prune here — see pruneOldRegions below.
+  function generateRegion() {
+    if (!layout || !layout.imgs.length) return false;
+
+    const region = document.createElement("div");
+    region.className = "canvas-region";
+    shuffledCopy(layout.imgs).forEach((img) => {
+      placeImage(region, img, layout.width, layout.cols, layout.actualColWidth, layout.colHeights);
     });
+    canvasEl.appendChild(region);
+    layout.regions.push(region);
 
-    container.style.height = Math.max(...colHeights, 300) + 160 + "px";
+    layout.bottom = Math.max(...layout.colHeights, 0) + 160;
+    canvasEl.style.height = layout.bottom + "px";
+    return true;
+  }
+
+  // Drops the oldest live region(s) once more than MAX_LIVE_REGIONS
+  // exist. Only ever called from scroll-driven extension, never from
+  // the initial fill in renderCanvas — a small/filtered collection can
+  // need several tiny regions just to cover the first screen, and
+  // pruning during that initial fill would delete the very top of the
+  // page before the user ever scrolled anywhere.
+  function pruneOldRegions() {
+    while (layout.regions.length > MAX_LIVE_REGIONS) {
+      layout.regions.shift().remove();
+    }
+  }
+
+  // Called on scroll: tops up the canvas once the unscrolled buffer
+  // below the viewport runs low, then prunes anything now well above
+  // the top of the live window. Guarded by `extending` (reset on the
+  // next frame, once layout has caught up) so a burst of scroll events
+  // can't trigger overlapping runs, and by a hard iteration cap so an
+  // empty/tiny collection can never loop forever.
+  function extendCanvasIfNeeded() {
+    if (extending || !layout) return;
+    const remaining = () => layout.bottom - (canvasWrapEl.scrollTop + canvasWrapEl.clientHeight);
+    if (remaining() >= EXTEND_BUFFER_PX) return;
+
+    extending = true;
+    let guard = 0;
+    while (guard++ < 50 && remaining() < EXTEND_BUFFER_PX && generateRegion()) { /* keep extending */ }
+    pruneOldRegions();
+    requestAnimationFrame(() => { extending = false; });
   }
 
   function renderCanvas() {
-    const canvas = document.getElementById("canvas");
-    canvas.innerHTML = "";
-    canvas.style.height = "";
+    canvasEl.innerHTML = "";
+    canvasEl.style.height = "";
+    canvasWrapEl.scrollTop = 0;
 
     const imgs = filteredImages();
     updateHeader(imgs.length);
-    layoutWander(canvas, imgs);
+
+    const width = canvasEl.clientWidth || 900;
+    const { cols, actualColWidth } = columnsFor(width);
+    layout = { width, cols, actualColWidth, colHeights: new Array(cols).fill(0), bottom: 0, regions: [], imgs };
+
+    // Pre-fill the initial view (plus a little buffer) synchronously;
+    // scrolling takes over from there via extendCanvasIfNeeded.
+    let guard = 0;
+    while (guard++ < 50 && layout.bottom < canvasWrapEl.clientHeight * (1 + INITIAL_FILL_SCREENS) && generateRegion()) { /* keep filling */ }
   }
 
   // ---------- metadata panel (a small floating note beside the selected image) ----------
@@ -506,11 +584,16 @@
   async function init() {
     await preloadDimensions();
 
+    canvasEl = document.getElementById("canvas");
+    canvasWrapEl = document.getElementById("canvas-wrap");
+
     renderSidebar();
     updateNavActive();
     renderCanvas();
     renderSymbolLabels();
     hideMetaPanel();
+
+    canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
 
     document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
 
