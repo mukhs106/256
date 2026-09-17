@@ -383,11 +383,13 @@
     state.trail = [img.id];
     state.isolatedId = img.id;
     document.getElementById("isolation").hidden = false;
+    document.body.classList.add("isolating");
     renderIsolation(img);
   }
 
   function closeIsolation() {
     document.getElementById("isolation").hidden = true;
+    document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
     setMetaPanel(null);
