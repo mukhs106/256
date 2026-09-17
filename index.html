@@ -6,60 +6,27 @@
 <title>an archive of play</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barriecito&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
 <div class="app" id="app">
 
-  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
-
-  <aside class="sidebar" id="sidebar">
-    <nav class="nav-section">
-      <div class="nav-label">all photos</div>
-      <button class="nav-item active" data-collection="all" id="nav-all">
-        <span class="nav-item-preview" id="nav-all-preview"></span>
-        <span class="nav-item-name">library</span>
-      </button>
-    </nav>
-
-    <nav class="nav-section" id="collections-nav">
-      <div class="nav-label">collections</div>
-      <!-- injected by js -->
-    </nav>
-
-    <div class="nav-section">
-      <button class="shuffle-btn" id="shuffle-btn" title="Re-scatter the library">⟲ shuffle</button>
-    </div>
-  </aside>
-
   <main class="main">
     <header class="toolbar">
       <nav class="icon-nav" aria-label="category symbols">
-        <div class="icon-nav-group">
-          <span class="nav-symbol"><img src="symbols/1.svg" alt="" width="40" height="40" /></span>
-          <span class="nav-symbol"><img src="symbols/2.svg" alt="" width="40" height="40" /></span>
-          <span class="nav-symbol"><img src="symbols/3.svg" alt="" width="40" height="40" /></span>
-        </div>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/1.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/2.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/3.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
         <div class="brand">
           <div class="brand-name">time well wasted!</div>
-          <div class="brand-sub">an archive of play</div>
+          <div class="brand-sub">wander. notice what catches.</div>
         </div>
-        <div class="icon-nav-group">
-          <span class="nav-symbol"><img src="symbols/4.svg" alt="" width="40" height="40" /></span>
-          <span class="nav-symbol"><img src="symbols/5.svg" alt="" width="40" height="40" /></span>
-          <span class="nav-symbol"><img src="symbols/6.svg" alt="" width="40" height="40" /></span>
-        </div>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/4.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/5.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/6.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
       </nav>
-
-      <div class="toolbar-row">
-        <div class="toolbar-left">
-          <h1 class="collection-title" id="collection-title">all photos</h1>
-          <div class="collection-blurb" id="collection-blurb"></div>
-        </div>
-        <span class="collection-count" id="collection-count"></span>
-      </div>
     </header>
 
     <div class="canvas-wrap" id="canvas-wrap">
@@ -69,16 +36,25 @@
 
   <div class="meta-panel" id="meta-panel">
     <div class="meta-caption" id="meta-caption"></div>
-    <div class="meta-grid">
-      <div class="meta-field"><span class="meta-key">image name:</span><span class="meta-val" id="meta-name"></span></div>
-      <div class="meta-field"><span class="meta-key">type:</span><span class="meta-val" id="meta-type"></span></div>
-      <div class="meta-field"><span class="meta-key">kept because:</span><span class="meta-val" id="meta-kept"></span></div>
-      <div class="meta-field"><span class="meta-key">source:</span><span class="meta-val" id="meta-source"></span></div>
-      <div class="meta-field"><span class="meta-key">when:</span><span class="meta-val" id="meta-when"></span></div>
-      <div class="meta-field"><span class="meta-key">where:</span><span class="meta-val" id="meta-where"></span></div>
-      <div class="meta-field"><span class="meta-key">returned to:</span><span class="meta-val" id="meta-returned"></span></div>
-      <div class="meta-field"><span class="meta-key">connection:</span><span class="meta-val" id="meta-connection"></span></div>
+    <div class="meta-primary">
+      <div class="meta-field"><span class="meta-key">kept because</span><span class="meta-val" id="meta-kept"></span></div>
+      <div class="meta-field"><span class="meta-key">connection</span><span class="meta-val" id="meta-connection"></span></div>
+      <div class="meta-field meta-field-quiet"><span class="meta-key">returned to</span><span class="meta-val" id="meta-returned"></span></div>
     </div>
+    <div class="meta-secondary" id="meta-secondary">
+      <div class="meta-field-sm" id="meta-when-row"><span class="meta-key-sm">when</span><span class="meta-val-sm" id="meta-when"></span></div>
+      <div class="meta-field-sm" id="meta-where-row"><span class="meta-key-sm">where</span><span class="meta-val-sm" id="meta-where"></span></div>
+      <div class="meta-field-sm" id="meta-source-row"><span class="meta-key-sm">source</span><span class="meta-val-sm" id="meta-source"></span></div>
+    </div>
+  </div>
+
+  <button class="info-btn" id="info-btn" aria-haspopup="true" aria-expanded="false" aria-label="A note, of sorts">i</button>
+
+  <div class="info-panel" id="info-panel" hidden>
+    <button class="info-panel-close" id="info-panel-close" aria-label="Close">✕</button>
+    <p>nothing here is trying to get anywhere.</p>
+    <p>wander in a direction for no reason. notice what catches. follow it sideways, then forget why. some things you'll come back to more than once — that's not a bug.</p>
+    <p>stay as long as it stays interesting.</p>
   </div>
 
   <div class="isolation" id="isolation" hidden>
@@ -98,6 +74,13 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/modes-config.js"></script>
+<script src="js/mode-manager.js"></script>
+<script src="js/modes/just-see-what-happens.js"></script>
+<script src="js/modes/no-point.js"></script>
+<script src="js/modes/play-with-the-rules.js"></script>
+<script src="js/modes/lose-track-of-time.js"></script>
+<script src="js/modes/what-else-could-it-be.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

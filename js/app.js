@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, collections, libraryCover } = window.APP_DATA;
+  const { images, symbolLabels } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -34,33 +34,12 @@
     return best;
   }
 
+  // state.collectionId stays "all" until the symbols are wired up to
+  // filtering in a future pass — kept here (and in data.js) so that
+  // work has something to plug into without touching this function.
   function filteredImages() {
     if (state.collectionId === "all") return images;
     return images.filter((i) => i.collections.includes(state.collectionId));
-  }
-
-  // Collection names are stored as "TITLE [tag]" — split them so the
-  // sidebar can show the title and bracketed tag on their own lines.
-  function splitTitle(name) {
-    const m = name.match(/^(.*)\s\[(.*)\]\s*$/);
-    return m ? { title: m[1], tag: m[2] } : { title: name, tag: "" };
-  }
-
-  // Each collection's cover comes from its own `cover` field in data.js
-  // (a filename). Falls back to the first member photo, then the first
-  // photo overall, if a cover hasn't been set or doesn't match a file.
-  function coverFor(col) {
-    if (col.cover) {
-      const byFile = images.find((im) => im.file === col.cover);
-      if (byFile) return byFile;
-    }
-    const member = images.find((im) => im.collections.includes(col.id));
-    return member || images[0];
-  }
-
-  function libraryCoverImage() {
-    const byFile = libraryCover && images.find((im) => im.file === libraryCover);
-    return byFile || images[0];
   }
 
   // ---------- preload real image dimensions ----------
@@ -83,56 +62,85 @@
     })));
   }
 
-  // ---------- sidebar ----------
+  // ---------- icon nav (category symbols) ----------
+  // Purely a label reveal for now — the symbols aren't wired to
+  // filtering yet, so this just pairs each static nav-symbol with its
+  // name from data.js, in order.
 
-  function renderSidebar() {
-    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(libraryCoverImage())}')`;
-    document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
-
-    const nav = document.getElementById("collections-nav");
-    nav.innerHTML = '<div class="nav-label">collections</div>';
-    collections.forEach((col) => {
-      const cover = coverFor(col);
-      const { title, tag } = splitTitle(col.name.toLowerCase());
-      const btn = document.createElement("button");
-      btn.className = "nav-item";
-      btn.dataset.collection = col.id;
-      btn.innerHTML = `<span class="nav-item-preview" style="background-image:url('${imgUrl(cover)}')"></span>
-        <span class="nav-item-name">
-          <span class="nav-item-title">${title}</span>
-          ${tag ? `<span class="nav-item-tag">${tag}</span>` : ""}
-        </span>`;
-      btn.addEventListener("click", () => selectCollection(col.id));
-      nav.appendChild(btn);
+  function renderSymbolLabels() {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      const label = sym.querySelector(".nav-symbol-label");
+      if (!label) return;
+      label.textContent = symbolLabels[i] || "";
+      const clamp = () => clampSymbolLabel(sym, label);
+      sym.addEventListener("mouseenter", clamp);
+      sym.addEventListener("focus", clamp);
     });
   }
 
-  function updateNavActive() {
-    document.querySelectorAll(".nav-item").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.collection === state.collectionId);
-    });
+  // Long labels centered under a symbol near the left/right edge would
+  // otherwise get clipped by .main's overflow:hidden; nudge them inward
+  // via the --label-shift custom property (see style.css) instead.
+  function clampSymbolLabel(sym, label) {
+    label.style.setProperty("--label-shift", "0px");
+    const mainRect = document.querySelector(".main").getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+    const pad = 8;
+    let shift = 0;
+    if (labelRect.left < mainRect.left + pad) shift = (mainRect.left + pad) - labelRect.left;
+    else if (labelRect.right > mainRect.right - pad) shift = (mainRect.right - pad) - labelRect.right;
+    if (shift) label.style.setProperty("--label-shift", shift + "px");
   }
 
-  function updateHeader(count) {
-    const titleEl = document.getElementById("collection-title");
-    const countEl = document.getElementById("collection-count");
-    const blurbEl = document.getElementById("collection-blurb");
-    if (state.collectionId === "all") {
-      titleEl.textContent = "all photos";
-      blurbEl.textContent = "";
-    } else {
-      const col = collections.find((c) => c.id === state.collectionId);
-      titleEl.textContent = col.name.toLowerCase();
-      blurbEl.textContent = "";
-    }
-    countEl.textContent = count + (count === 1 ? " image" : " images");
-  }
-
+  // Not called from anywhere yet (no UI sets a collection id besides
+  // "all") — left in place for the symbol-driven filtering that will
+  // replace the old sidebar's job.
   function selectCollection(id) {
     state.collectionId = id;
-    updateNavActive();
     renderCanvas();
-    closeSidebarOnMobile();
+  }
+
+  // ---------- mode switching (symbol nav -> ModeManager) ----------
+  // Which symbol maps to which mode lives entirely in MODE_CONFIG
+  // (js/modes-config.js) as symbol_1..symbol_6, in the same left-to-
+  // right order as the .nav-symbol elements in index.html. This code
+  // never hard-codes a mode id — it just looks up "symbol_" + (index+1)
+  // and hands whatever it finds to ModeManager.
+
+  function modeIdForSymbolIndex(i) {
+    const key = "symbol_" + (i + 1);
+    return (window.MODE_CONFIG && window.MODE_CONFIG[key]) || null;
+  }
+
+  function setActiveSymbolUI(activeIndex) {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      const isActive = i === activeIndex;
+      sym.classList.toggle("active", isActive);
+      sym.setAttribute("aria-pressed", String(isActive));
+    });
+  }
+
+  // Clicking the symbol for the mode that's already active turns it
+  // back off (plain archive, no symbol marked active) rather than
+  // re-entering it — the reserved symbol (mapped to null) always lands
+  // here too, since it has no mode to turn on.
+  function handleSymbolActivate(i) {
+    const modeId = modeIdForSymbolIndex(i);
+    const turningOn = modeId && window.ModeManager.getActiveId() !== modeId;
+    window.ModeManager.activate(turningOn ? modeId : null);
+    setActiveSymbolUI(turningOn ? i : -1);
+  }
+
+  function wireModeSwitching() {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      sym.addEventListener("click", () => handleSymbolActivate(i));
+      sym.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleSymbolActivate(i);
+        }
+      });
+    });
   }
 
   // ---------- card element ----------
@@ -159,99 +167,232 @@
     caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
     el.appendChild(caption);
 
-    el.addEventListener("mouseenter", () => showMeta(img));
+    el.addEventListener("mouseenter", () => showMeta(img, frame));
     el.addEventListener("mouseleave", hideMeta);
     el.addEventListener("click", () => openIsolation(img));
     return el;
   }
 
   // ---------- layout ----------
-  // A single scattered composition: loosely packed, jittered, rotated,
-  // sized by each photo's real aspect ratio, with generous breathing
-  // room between images and only a rare, slight overlap.
-
+  // An open-ended scattered composition: instead of laying the whole
+  // collection out once into a fixed-height canvas, the canvas grows
+  // downward in "regions" — one freshly shuffled pass through the
+  // current collection each — generated as the user scrolls near the
+  // bottom. Older regions are pruned once enough newer ones exist, so
+  // wandering never hits a hard edge but the DOM stays bounded. Every
+  // region uses the exact same per-image placement math the original
+  // single-pass layout used (same jitter/rotation/sizing/gaps), just
+  // continuing from wherever the previous region's columns left off,
+  // so a loop through the set never looks identical to the one before.
+  //
+  // Tuning knobs, all in px/screens/count so they're easy to adjust:
   const CAPTION_H = 22; // approximate space the always-on caption takes below each photo
+  const EXTEND_BUFFER_PX = 1600; // start generating more once within this many px of the bottom
+  const MAX_LIVE_REGIONS = 4; // shuffled passes kept mounted at once; older ones are pruned
+  const INITIAL_FILL_SCREENS = 1.5; // viewport-heights of content to pre-fill on load/reset
 
-  function layoutWander(container, imgs) {
-    const width = container.clientWidth || 900;
+  let canvasEl = null;
+  let canvasWrapEl = null;
+  let layout = null; // { width, cols, actualColWidth, colHeights, bottom, regions, imgs }
+  let extending = false;
+  let autoExtendEnabled = true; // modes can pause the scroll-triggered region generation via ArchiveAPI.setAutoExtend
+
+  function columnsFor(width) {
     const colWidth = width < 640 ? 135 : width < 1000 ? 160 : 185;
     const cols = Math.max(2, Math.floor(width / colWidth));
-    const actualColWidth = width / cols;
-    const colHeights = new Array(cols).fill(0);
+    return { cols, actualColWidth: width / cols };
+  }
 
-    const order = imgs.slice();
+  function shuffledCopy(list) {
+    const order = list.slice();
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [order[i], order[j]] = [order[j], order[i]];
     }
+    return order;
+  }
 
-    order.forEach((img) => {
-      let col;
-      if (Math.random() < 0.85) {
-        col = colHeights.indexOf(Math.min(...colHeights));
-      } else {
-        col = Math.floor(Math.random() * cols);
-      }
-      const w = img.w, h = img.h;
-      const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.45);
-      let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
-      left = Math.max(10, Math.min(width - w - 10, left));
+  // Places one image within the running column layout — identical math
+  // to the original single-pass algorithm, just operating on layout
+  // state that now persists across regions instead of being local to
+  // one call. Mutates colHeights in place.
+  function placeImage(container, img, width, cols, actualColWidth, colHeights) {
+    let col;
+    if (Math.random() < 0.85) {
+      col = colHeights.indexOf(Math.min(...colHeights));
+    } else {
+      col = Math.floor(Math.random() * cols);
+    }
+    const w = img.w, h = img.h;
+    const jitterX = (Math.random() * 2 - 1) * Math.max(0, (actualColWidth - w) * 0.45);
+    let left = col * actualColWidth + (actualColWidth - w) / 2 + jitterX;
+    left = Math.max(10, Math.min(width - w - 10, left));
 
-      let gap = 55 + Math.random() * 72;
-      if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
-      const top = Math.max(0, colHeights[col] + gap);
+    let gap = 55 + Math.random() * 72;
+    if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
+    const top = Math.max(0, colHeights[col] + gap);
 
-      const rotation = (Math.random() * 14 - 7).toFixed(1);
-      const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
+    const rotation = (Math.random() * 14 - 7).toFixed(1);
+    const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
 
-      const el = makeCard(img);
-      el.style.position = "absolute";
-      el.style.left = left + "px";
-      el.style.top = top + "px";
-      el.style.width = w + "px";
-      el.style.transform = `rotate(${rotation}deg)`;
-      el.style.zIndex = z;
-      el.querySelector(".photo-frame").style.height = h + "px";
-      container.appendChild(el);
+    const el = makeCard(img);
+    el.style.position = "absolute";
+    el.style.left = left + "px";
+    el.style.top = top + "px";
+    el.style.width = w + "px";
+    el.style.transform = `rotate(${rotation}deg)`;
+    el.style.zIndex = z;
+    el.querySelector(".photo-frame").style.height = h + "px";
+    container.appendChild(el);
 
-      colHeights[col] = top + h + CAPTION_H;
+    colHeights[col] = top + h + CAPTION_H;
+  }
+
+  // Lays out one freshly shuffled pass through the current collection,
+  // continuing downward from the layout's current column heights.
+  // Returns false (and does nothing) once there's nothing to lay out,
+  // so callers can use it as a loop condition without spinning forever.
+  // Deliberately does NOT prune here — see pruneOldRegions below.
+  function generateRegion() {
+    if (!layout || !layout.imgs.length) return false;
+
+    const region = document.createElement("div");
+    region.className = "canvas-region";
+    shuffledCopy(layout.imgs).forEach((img) => {
+      placeImage(region, img, layout.width, layout.cols, layout.actualColWidth, layout.colHeights);
     });
+    canvasEl.appendChild(region);
+    layout.regions.push(region);
 
-    container.style.height = Math.max(...colHeights, 300) + 160 + "px";
+    layout.bottom = Math.max(...layout.colHeights, 0) + 160;
+    canvasEl.style.height = layout.bottom + "px";
+    return true;
+  }
+
+  // Drops the oldest live region(s) once more than MAX_LIVE_REGIONS
+  // exist. Only ever called from scroll-driven extension, never from
+  // the initial fill in renderCanvas — a small/filtered collection can
+  // need several tiny regions just to cover the first screen, and
+  // pruning during that initial fill would delete the very top of the
+  // page before the user ever scrolled anywhere.
+  function pruneOldRegions() {
+    while (layout.regions.length > MAX_LIVE_REGIONS) {
+      layout.regions.shift().remove();
+    }
+  }
+
+  // Called on scroll: tops up the canvas once the unscrolled buffer
+  // below the viewport runs low, then prunes anything now well above
+  // the top of the live window. Guarded by `extending` (reset on the
+  // next frame, once layout has caught up) so a burst of scroll events
+  // can't trigger overlapping runs, and by a hard iteration cap so an
+  // empty/tiny collection can never loop forever.
+  function extendCanvasIfNeeded() {
+    if (extending || !layout || !autoExtendEnabled) return;
+    const remaining = () => layout.bottom - (canvasWrapEl.scrollTop + canvasWrapEl.clientHeight);
+    if (remaining() >= EXTEND_BUFFER_PX) return;
+
+    extending = true;
+    let guard = 0;
+    while (guard++ < 50 && remaining() < EXTEND_BUFFER_PX && generateRegion()) { /* keep extending */ }
+    pruneOldRegions();
+    requestAnimationFrame(() => { extending = false; });
   }
 
   function renderCanvas() {
-    const canvas = document.getElementById("canvas");
-    canvas.innerHTML = "";
-    canvas.style.height = "";
+    canvasEl.innerHTML = "";
+    canvasEl.style.height = "";
+    canvasWrapEl.scrollTop = 0;
 
     const imgs = filteredImages();
-    updateHeader(imgs.length);
-    layoutWander(canvas, imgs);
+
+    const width = canvasEl.clientWidth || 900;
+    const { cols, actualColWidth } = columnsFor(width);
+    layout = { width, cols, actualColWidth, colHeights: new Array(cols).fill(0), bottom: 0, regions: [], imgs };
+
+    // Pre-fill the initial view (plus a little buffer) synchronously;
+    // scrolling takes over from there via extendCanvasIfNeeded.
+    let guard = 0;
+    while (guard++ < 50 && layout.bottom < canvasWrapEl.clientHeight * (1 + INITIAL_FILL_SCREENS) && generateRegion()) { /* keep filling */ }
   }
 
-  // ---------- metadata panel (docked to the bottom of the sidebar) ----------
+  // ---------- metadata panel (a small floating note beside the selected image) ----------
+  // image name + type stay on the `img` object (used for captions and dot
+  // count elsewhere) but are intentionally not surfaced in this panel.
+  // kept/connection/returned are the primary, always-labeled fields;
+  // when/where/source are secondary and only appear when filled in, so
+  // they never compete with the primary three.
 
   function setMetaPanel(img) {
-    document.getElementById("meta-caption").textContent = img ? img.caption : "";
-    document.getElementById("meta-name").textContent = img ? img.code : "";
-    document.getElementById("meta-type").textContent = img ? img.type : "";
+    const caption = document.getElementById("meta-caption");
+    caption.textContent = img ? img.caption : "";
+    caption.hidden = !(img && img.caption);
+
     document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
-    document.getElementById("meta-source").textContent = img ? img.source : "";
-    document.getElementById("meta-when").textContent = img ? img.dateLabel : "";
-    document.getElementById("meta-where").textContent = img ? img.location : "";
-    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
     document.getElementById("meta-connection").textContent = img ? img.connection : "";
+    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
+
+    const secondary = [
+      ["meta-when-row", img && img.dateLabel, "meta-when", img && img.dateLabel],
+      ["meta-where-row", img && img.location, "meta-where", img && img.location],
+      ["meta-source-row", img && img.source, "meta-source", img && img.source],
+    ];
+    let anySecondary = false;
+    secondary.forEach(([rowId, has, valId, val]) => {
+      document.getElementById(rowId).hidden = !has;
+      document.getElementById(valId).textContent = val || "";
+      if (has) anySecondary = true;
+    });
+    document.getElementById("meta-secondary").hidden = !anySecondary;
   }
 
-  function showMeta(img) {
-    if (!document.getElementById("isolation").hidden) return;
+  // Places the floating panel just beside `targetEl` (a photo frame or the
+  // isolation stage image), clamped so it never runs off the viewport.
+  function positionMetaPanel(targetEl) {
+    const panel = document.getElementById("meta-panel");
+    const rect = targetEl.getBoundingClientRect();
+    const margin = 14;
+
+    panel.style.visibility = "hidden";
+    panel.classList.add("visible");
+    const pw = panel.offsetWidth;
+    const ph = panel.offsetHeight;
+
+    let left = rect.right + margin;
+    if (left + pw + margin > window.innerWidth) {
+      left = rect.left - pw - margin;
+    }
+    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+
+    let top = rect.top;
+    top = Math.max(margin, Math.min(top, window.innerHeight - ph - margin));
+
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+    panel.style.visibility = "";
+  }
+
+  // Does the actual work of showing the panel next to `targetEl`. Used
+  // directly by the isolation view (which manages its own open/closed
+  // state) and, guarded, by card hover below.
+  function applyMetaPanel(img, targetEl) {
     setMetaPanel(img);
+    if (targetEl) positionMetaPanel(targetEl);
+    document.getElementById("meta-panel").classList.add("visible");
+  }
+
+  function hideMetaPanel() {
+    document.getElementById("meta-panel").classList.remove("visible");
+  }
+
+  function showMeta(img, targetEl) {
+    if (!document.getElementById("isolation").hidden) return;
+    applyMetaPanel(img, targetEl);
   }
 
   function hideMeta() {
     if (!document.getElementById("isolation").hidden) return;
-    setMetaPanel(null);
+    hideMetaPanel();
   }
 
   // ---------- isolation view ----------
@@ -391,16 +532,50 @@
     document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
-    setMetaPanel(null);
+    hideMetaPanel();
   }
 
-  // ---------- sidebar toggle (mobile) ----------
+  // ---------- info panel ----------
 
-  function closeSidebarOnMobile() {
-    if (window.innerWidth <= 820) {
-      document.getElementById("app").classList.remove("sidebar-open");
-    }
+  function openInfoPanel() {
+    document.getElementById("info-panel").hidden = false;
+    document.getElementById("info-btn").setAttribute("aria-expanded", "true");
   }
+
+  function closeInfoPanel() {
+    document.getElementById("info-panel").hidden = true;
+    document.getElementById("info-btn").setAttribute("aria-expanded", "false");
+  }
+
+  // ---------- mode system bridge ----------
+  // The curated surface every mode gets as ctx.archive. Modes read the
+  // archive and hook into it only through this object — never by
+  // reaching into app.js internals directly — so what a mode can touch
+  // stays deliberate and stable. getImages() returns the permanent,
+  // shared photo data (positions/metadata/collections all live on it);
+  // treat it as read-only, since every mode draws from the same list.
+  const ArchiveAPI = {
+    getImages() { return images; },
+    getCanvasEl() { return canvasEl; },
+    getCanvasWrapEl() { return canvasWrapEl; },
+    getCards() { return canvasEl ? Array.from(canvasEl.querySelectorAll(".photo-card")) : []; },
+    cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
+    openIsolation,
+    closeIsolation,
+    showMeta,
+    hideMeta,
+    setAutoExtend(on) { autoExtendEnabled = !!on; },
+    // The reset hook ModeManager calls on every mode switch, before the
+    // next mode (if any) enters: rebuilds the canvas straight from the
+    // permanent image data, discarding whatever the previous mode did
+    // to the DOM (dragged positions, temporary elements, added
+    // classes...) without ever touching that underlying data itself.
+    resetView() {
+      autoExtendEnabled = true;
+      renderCanvas();
+      hideMeta();
+    },
+  };
 
   // ---------- init ----------
 
@@ -412,12 +587,17 @@
   async function init() {
     await preloadDimensions();
 
-    renderSidebar();
-    updateNavActive();
-    renderCanvas();
-    setMetaPanel(null);
+    canvasEl = document.getElementById("canvas");
+    canvasWrapEl = document.getElementById("canvas-wrap");
 
-    document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
+    renderCanvas();
+    renderSymbolLabels();
+    hideMetaPanel();
+
+    window.ModeManager.configure(ArchiveAPI);
+    wireModeSwitching();
+
+    canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
 
     document.getElementById("isolation-close").addEventListener("click", closeIsolation);
     document.getElementById("isolation").addEventListener("click", (e) => {
@@ -427,11 +607,21 @@
       if (e.key === "Escape" && !document.getElementById("isolation").hidden) closeIsolation();
     });
 
-    document.getElementById("sidebar-toggle").addEventListener("click", () => {
-      document.getElementById("app").classList.toggle("sidebar-open");
+    document.getElementById("info-btn").addEventListener("click", () => {
+      document.getElementById("info-panel").hidden ? openInfoPanel() : closeInfoPanel();
+    });
+    document.getElementById("info-panel-close").addEventListener("click", closeInfoPanel);
+    document.addEventListener("click", (e) => {
+      const panel = document.getElementById("info-panel");
+      if (panel.hidden) return;
+      if (panel.contains(e.target) || e.target.id === "info-btn") return;
+      closeInfoPanel();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
     });
 
-    window.addEventListener("resize", debounce(renderCanvas, 200));
+    window.addEventListener("resize", debounce(() => { renderCanvas(); hideMeta(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);
