@@ -14,7 +14,6 @@
   --ink-faint: #9a9a9a;
   --line: #e8e8e8;
   --card-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.08);
-  --sidebar-w: 240px;
 
   /* type — one family throughout; hierarchy comes from size/weight/
      spacing, not a second typeface */
@@ -81,58 +80,19 @@ button {
   position: relative;
 }
 
-.sidebar-toggle {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 90;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  font-size: 15px;
-  color: var(--ink);
-}
-
-.sidebar-toggle:hover {
-  background-color: var(--yellow-hover);
-  border-color: var(--ink);
-}
-
-/* ---------------- sidebar ---------------- */
-
-.sidebar {
-  width: var(--sidebar-w);
-  flex: 0 0 var(--sidebar-w);
-  background: var(--paper);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  padding: 20px 14px;
-  padding-bottom: 320px;
-  overflow-y: auto;
-}
-
-/* ---------------- icon nav (category symbols) ---------------- */
+/* ---------------- icon nav (category symbols) ----------------
+   Flattened on purpose: all six symbols and the brand block are direct
+   siblings in one space-between row, so the gaps between all seven
+   items come out approximately equal — evenly spread across the full
+   header width rather than clustered into two tight trios at the
+   edges. */
 
 .icon-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   width: 100%;
-}
-
-.icon-nav-group {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  flex: 1 1 0;
-}
-
-.icon-nav-group:last-child {
-  justify-content: flex-end;
 }
 
 .nav-symbol {
@@ -140,12 +100,13 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
   /* the rest of the toolbar is pointer-events:none so its text can't
-     block the canvas below; these specific 40x40 boxes opt back in so
-     they can be hovered/focused */
+     block the canvas below; these specific boxes opt back in so they
+     can be hovered/focused — the box itself doubles as the (generous)
+     click target, so it grows along with the visual symbol size */
   pointer-events: auto;
   cursor: pointer;
   outline: none;
@@ -162,13 +123,13 @@ button {
   z-index: 1;
 }
 
-/* Hover halo — sized larger than the 40x40 box via an absolutely
+/* Hover halo — sized larger than the 52x52 box via an absolutely
    positioned pseudo-element, so the glow can breathe without ever
    changing the box's own dimensions (no layout shift). */
 .nav-symbol::before {
   content: "";
   position: absolute;
-  inset: -9px;
+  inset: -12px;
   border-radius: 50%;
   background: var(--yellow-hover);
   opacity: 0;
@@ -197,8 +158,8 @@ button {
 }
 
 /* The category name — a mysterious invitation, not a persistent label.
-   Absolutely positioned so revealing it never shifts anything around
-   it (the toolbar row below sits at a fixed distance regardless). */
+   Absolutely positioned so revealing it never shifts the symbol row or
+   anything below it. */
 .nav-symbol-label {
   --label-shift: 0px; /* nudged by JS so long labels near an edge don't get clipped by .main's overflow:hidden */
   position: absolute;
@@ -239,104 +200,10 @@ button {
 
 .brand-sub {
   font-family: var(--font-body);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
   color: var(--ink-faint);
   margin-top: 5px;
-}
-
-.nav-section {
-  margin-bottom: 22px;
-}
-
-.nav-label {
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  padding: 0 8px 7px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 8px;
-  text-align: left;
-  line-height: 1.3;
-}
-
-.nav-item:hover {
-  background-color: var(--yellow-hover);
-  color: var(--ink);
-}
-
-.nav-item.active {
-  background: rgba(0, 0, 0, 0.07);
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.nav-item-preview {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  background-color: var(--line);
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.nav-item-name {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.nav-item-title {
-  display: block;
-}
-
-.nav-item-tag {
-  display: block;
-  font-size: 9.5px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-}
-
-.nav-item.active .nav-item-tag {
-  color: var(--ink-soft);
-}
-
-.shuffle-btn {
-  border: 1px dashed var(--line);
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 7px 10px;
-  width: 100%;
-}
-
-.shuffle-btn:hover {
-  border-color: var(--ink);
-  color: var(--ink);
-  background-color: var(--yellow-hover);
 }
 
 /* ---------------- main ---------------- */
@@ -360,68 +227,17 @@ button {
      sits in the header's band at nearly every scroll position, and it
      must fade under the header rather than paint over its text/icons. */
   z-index: 80;
-  display: flex;
-  flex-direction: column;
-  gap: 24px; /* leaves room for the symbol hover label between the two rows */
-  padding: 18px 28px 0;
-  height: 150px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 55%, rgba(255, 255, 255, 0) 100%);
+  padding: 22px 32px 0;
+  height: 132px;
+  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 60%, rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
-  flex-wrap: wrap;
-}
-
-.toolbar-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.toolbar-left {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 38%;
-  min-width: 0;
-}
-
-.collection-title {
-  font-family: var(--font-display);
-  font-size: 19px;
-  margin: 0;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.collection-blurb {
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--ink-faint);
-  font-style: italic;
-}
-
-.collection-count {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  text-align: right;
-  white-space: nowrap;
 }
 
 .canvas-wrap {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 124px 20px 60px;
+  padding: 108px 20px 60px;
 }
 
 .canvas {
@@ -566,6 +382,14 @@ button {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* "returned to" is still a primary field (always labeled) but quieter
+   than kept-because/connection, which carry the most emphasis. */
+.meta-field-quiet .meta-val {
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  color: var(--ink-soft);
 }
 
 /* Secondary: when / where / source — quieter, and only present at all
@@ -825,40 +649,19 @@ button {
 /* ---------------- responsive ---------------- */
 
 @media (max-width: 820px) {
-  .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+  .toolbar { height: auto; padding: 16px 20px; }
 
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-    z-index: 80;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.12);
-  }
+  .icon-nav { flex-wrap: wrap; justify-content: center; row-gap: 12px; }
 
-  .app.sidebar-open .sidebar {
-    transform: translateX(0);
-  }
-
-  .toolbar { padding-left: 56px; height: auto; padding-bottom: 10px; gap: 16px; }
-
-  .icon-nav { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
-
-  .icon-nav-group { gap: 10px; flex: 0 0 auto; }
-
-  .icon-nav-group:last-child { justify-content: center; }
-
-  .toolbar-row { padding-top: 2px; }
-
-  .toolbar-left { max-width: 52%; }
-
-  .collection-title { font-size: 15px; }
+  /* Forces the title onto its own centered row between the two rows of
+     three symbols, however the flex-wrap happens to break otherwise. */
+  .brand { flex-basis: 100%; }
 
   .brand-name { font-size: 16px; }
 
-  .brand-sub { font-size: 8.5px; }
+  .brand-sub { font-size: 9px; }
 
-  .canvas-wrap { padding-top: 150px; }
+  .canvas-wrap { padding-top: 190px; }
 
   .isolation-stage {
     flex-direction: column;

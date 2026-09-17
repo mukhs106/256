@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, collections, libraryCover, symbolLabels } = window.APP_DATA;
+  const { images, symbolLabels } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -34,33 +34,12 @@
     return best;
   }
 
+  // state.collectionId stays "all" until the symbols are wired up to
+  // filtering in a future pass — kept here (and in data.js) so that
+  // work has something to plug into without touching this function.
   function filteredImages() {
     if (state.collectionId === "all") return images;
     return images.filter((i) => i.collections.includes(state.collectionId));
-  }
-
-  // Collection names are stored as "TITLE [tag]" — split them so the
-  // sidebar can show the title and bracketed tag on their own lines.
-  function splitTitle(name) {
-    const m = name.match(/^(.*)\s\[(.*)\]\s*$/);
-    return m ? { title: m[1], tag: m[2] } : { title: name, tag: "" };
-  }
-
-  // Each collection's cover comes from its own `cover` field in data.js
-  // (a filename). Falls back to the first member photo, then the first
-  // photo overall, if a cover hasn't been set or doesn't match a file.
-  function coverFor(col) {
-    if (col.cover) {
-      const byFile = images.find((im) => im.file === col.cover);
-      if (byFile) return byFile;
-    }
-    const member = images.find((im) => im.collections.includes(col.id));
-    return member || images[0];
-  }
-
-  function libraryCoverImage() {
-    const byFile = libraryCover && images.find((im) => im.file === libraryCover);
-    return byFile || images[0];
   }
 
   // ---------- preload real image dimensions ----------
@@ -113,56 +92,12 @@
     if (shift) label.style.setProperty("--label-shift", shift + "px");
   }
 
-  // ---------- sidebar ----------
-
-  function renderSidebar() {
-    document.getElementById("nav-all-preview").style.backgroundImage = `url('${imgUrl(libraryCoverImage())}')`;
-    document.getElementById("nav-all").addEventListener("click", () => selectCollection("all"));
-
-    const nav = document.getElementById("collections-nav");
-    nav.innerHTML = '<div class="nav-label">collections</div>';
-    collections.forEach((col) => {
-      const cover = coverFor(col);
-      const { title, tag } = splitTitle(col.name.toLowerCase());
-      const btn = document.createElement("button");
-      btn.className = "nav-item";
-      btn.dataset.collection = col.id;
-      btn.innerHTML = `<span class="nav-item-preview" style="background-image:url('${imgUrl(cover)}')"></span>
-        <span class="nav-item-name">
-          <span class="nav-item-title">${title}</span>
-          ${tag ? `<span class="nav-item-tag">${tag}</span>` : ""}
-        </span>`;
-      btn.addEventListener("click", () => selectCollection(col.id));
-      nav.appendChild(btn);
-    });
-  }
-
-  function updateNavActive() {
-    document.querySelectorAll(".nav-item").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.collection === state.collectionId);
-    });
-  }
-
-  function updateHeader(count) {
-    const titleEl = document.getElementById("collection-title");
-    const countEl = document.getElementById("collection-count");
-    const blurbEl = document.getElementById("collection-blurb");
-    if (state.collectionId === "all") {
-      titleEl.textContent = "all photos";
-      blurbEl.textContent = "";
-    } else {
-      const col = collections.find((c) => c.id === state.collectionId);
-      titleEl.textContent = col.name.toLowerCase();
-      blurbEl.textContent = "";
-    }
-    countEl.textContent = count + (count === 1 ? " image" : " images");
-  }
-
+  // Not called from anywhere yet (no UI sets a collection id besides
+  // "all") — left in place for the symbol-driven filtering that will
+  // replace the old sidebar's job.
   function selectCollection(id) {
     state.collectionId = id;
-    updateNavActive();
     renderCanvas();
-    closeSidebarOnMobile();
   }
 
   // ---------- card element ----------
@@ -326,7 +261,6 @@
     canvasWrapEl.scrollTop = 0;
 
     const imgs = filteredImages();
-    updateHeader(imgs.length);
 
     const width = canvasEl.clientWidth || 900;
     const { cols, actualColWidth } = columnsFor(width);
@@ -554,14 +488,6 @@
     hideMetaPanel();
   }
 
-  // ---------- sidebar toggle (mobile) ----------
-
-  function closeSidebarOnMobile() {
-    if (window.innerWidth <= 820) {
-      document.getElementById("app").classList.remove("sidebar-open");
-    }
-  }
-
   // ---------- info panel ----------
 
   function openInfoPanel() {
@@ -587,15 +513,11 @@
     canvasEl = document.getElementById("canvas");
     canvasWrapEl = document.getElementById("canvas-wrap");
 
-    renderSidebar();
-    updateNavActive();
     renderCanvas();
     renderSymbolLabels();
     hideMetaPanel();
 
     canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
-
-    document.getElementById("shuffle-btn").addEventListener("click", renderCanvas);
 
     document.getElementById("isolation-close").addEventListener("click", closeIsolation);
     document.getElementById("isolation").addEventListener("click", (e) => {
@@ -603,10 +525,6 @@
     });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !document.getElementById("isolation").hidden) closeIsolation();
-    });
-
-    document.getElementById("sidebar-toggle").addEventListener("click", () => {
-      document.getElementById("app").classList.toggle("sidebar-open");
     });
 
     document.getElementById("info-btn").addEventListener("click", () => {

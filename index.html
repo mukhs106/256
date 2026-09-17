@@ -13,53 +13,20 @@
 
 <div class="app" id="app">
 
-  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
-
-  <aside class="sidebar" id="sidebar">
-    <nav class="nav-section">
-      <div class="nav-label">all photos</div>
-      <button class="nav-item active" data-collection="all" id="nav-all">
-        <span class="nav-item-preview" id="nav-all-preview"></span>
-        <span class="nav-item-name">library</span>
-      </button>
-    </nav>
-
-    <nav class="nav-section" id="collections-nav">
-      <div class="nav-label">collections</div>
-      <!-- injected by js -->
-    </nav>
-
-    <div class="nav-section">
-      <button class="shuffle-btn" id="shuffle-btn" title="Re-scatter the library">⟲ shuffle</button>
-    </div>
-  </aside>
-
   <main class="main">
     <header class="toolbar">
       <nav class="icon-nav" aria-label="category symbols">
-        <div class="icon-nav-group">
-          <span class="nav-symbol" tabindex="0"><img src="symbols/1.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-          <span class="nav-symbol" tabindex="0"><img src="symbols/2.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-          <span class="nav-symbol" tabindex="0"><img src="symbols/3.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-        </div>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/1.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/2.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/3.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
         <div class="brand">
           <div class="brand-name">time well wasted!</div>
-          <div class="brand-sub">an archive of play</div>
+          <div class="brand-sub">wander. notice what catches.</div>
         </div>
-        <div class="icon-nav-group">
-          <span class="nav-symbol" tabindex="0"><img src="symbols/4.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-          <span class="nav-symbol" tabindex="0"><img src="symbols/5.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-          <span class="nav-symbol" tabindex="0"><img src="symbols/6.svg" alt="" width="40" height="40" /><span class="nav-symbol-label"></span></span>
-        </div>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/4.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/5.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0"><img src="symbols/6.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
       </nav>
-
-      <div class="toolbar-row">
-        <div class="toolbar-left">
-          <h1 class="collection-title" id="collection-title">all photos</h1>
-          <div class="collection-blurb" id="collection-blurb"></div>
-        </div>
-        <span class="collection-count" id="collection-count"></span>
-      </div>
     </header>
 
     <div class="canvas-wrap" id="canvas-wrap">
@@ -72,7 +39,7 @@
     <div class="meta-primary">
       <div class="meta-field"><span class="meta-key">kept because</span><span class="meta-val" id="meta-kept"></span></div>
       <div class="meta-field"><span class="meta-key">connection</span><span class="meta-val" id="meta-connection"></span></div>
-      <div class="meta-field"><span class="meta-key">returned to</span><span class="meta-val" id="meta-returned"></span></div>
+      <div class="meta-field meta-field-quiet"><span class="meta-key">returned to</span><span class="meta-val" id="meta-returned"></span></div>
     </div>
     <div class="meta-secondary" id="meta-secondary">
       <div class="meta-field-sm" id="meta-when-row"><span class="meta-key-sm">when</span><span class="meta-val-sm" id="meta-when"></span></div>
