@@ -371,9 +371,8 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // Metadata for the isolated photo lives in the same corner dock as
-    // the hover metadata, not inline in the stage.
-    setMetaPanel(img);
+    // The isolation view has no metadata dock beside it.
+    setMetaPanel(null);
 
     renderTrail();
     renderPaths(img);
