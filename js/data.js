@@ -108,6 +108,10 @@
   // Every field is a plain string ("" if not filled in yet).
   //   caption      — a line about the photo
   //   type         — "primary" or "secondary" (one dot vs two on the card)
+  //   tags         — array of 2-4 tags from a fixed vocabulary, describing
+  //                  visual/conceptual qualities that connect this photo
+  //                  to others and to collections (not a replacement for
+  //                  "collections" — a looser, underlying layer)
   //   source       — where it came from (e.g. "iPhone 13", "screenshot")
   //   location     — where/when it was taken (e.g. "kitchen counter")
   //   date         — e.g. "Jun 3, 2024" (shown as typed, also used to
@@ -122,6 +126,7 @@
     "IMG_01.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "food"],
       source: "",
       location: "",
       date: "",
@@ -133,6 +138,7 @@
     "IMG_17.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["texture", "color", "experimentation"],
       source: "",
       location: "",
       date: "",
@@ -144,6 +150,7 @@
     "IMG_18.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "color", "texture"],
       source: "",
       location: "",
       date: "",
@@ -155,6 +162,7 @@
     "IMG_02.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["food", "texture", "color"],
       source: "",
       location: "",
       date: "",
@@ -166,6 +174,7 @@
     "IMG_03.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "playful"],
       source: "",
       location: "",
       date: "",
@@ -177,6 +186,7 @@
     "IMG_04.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["food", "surreal", "odd"],
       source: "",
       location: "",
       date: "",
@@ -188,6 +198,7 @@
     "IMG_05.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["playful", "color", "odd", "surreal"],
       source: "",
       location: "",
       date: "",
@@ -199,6 +210,7 @@
     "IMG_06.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "typography", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -210,6 +222,7 @@
     "IMG_07.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["architecture", "playful", "color", "people"],
       source: "",
       location: "",
       date: "",
@@ -221,6 +234,7 @@
     "IMG_08.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "surreal", "people"],
       source: "",
       location: "",
       date: "",
@@ -232,6 +246,7 @@
     "IMG_09.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "surreal", "nature"],
       source: "",
       location: "",
       date: "",
@@ -243,6 +258,7 @@
     "IMG_10.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["food", "experimentation", "playful"],
       source: "",
       location: "",
       date: "",
@@ -254,6 +270,7 @@
     "IMG_11.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["playful", "collage", "shape"],
       source: "",
       location: "",
       date: "",
@@ -265,6 +282,7 @@
     "IMG_12.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "playful", "nature"],
       source: "",
       location: "",
       date: "",
@@ -276,6 +294,7 @@
     "IMG_13.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["nostalgia", "people", "playful", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -287,6 +306,7 @@
     "IMG_14.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "playful", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -298,6 +318,7 @@
     "IMG_15.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["playful", "color", "food"],
       source: "",
       location: "",
       date: "",
@@ -309,6 +330,7 @@
     "IMG_16.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "typography", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -320,6 +342,7 @@
     "IMG_19.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["surreal", "food", "odd", "people"],
       source: "",
       location: "",
       date: "",
@@ -331,6 +354,7 @@
     "IMG_20.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["architecture", "color", "playful", "people"],
       source: "",
       location: "",
       date: "",
@@ -342,6 +366,7 @@
     "IMG_21.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "negative-space"],
       source: "",
       location: "",
       date: "",
@@ -353,6 +378,7 @@
     "IMG_22.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["typography", "negative-space"],
       source: "",
       location: "",
       date: "",
@@ -364,6 +390,7 @@
     "IMG_23.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -375,6 +402,7 @@
     "IMG_24.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "architecture"],
       source: "",
       location: "",
       date: "",
@@ -386,6 +414,7 @@
     "IMG_25.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "color", "nature"],
       source: "",
       location: "",
       date: "",
@@ -397,6 +426,7 @@
     "IMG_26.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -408,6 +438,7 @@
     "IMG_27.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "nature", "negative-space"],
       source: "",
       location: "",
       date: "",
@@ -419,6 +450,7 @@
     "IMG_28.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -430,6 +462,7 @@
     "IMG_29.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "nature", "color"],
       source: "",
       location: "",
       date: "",
@@ -441,6 +474,7 @@
     "IMG_30.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "surreal", "color", "experimentation"],
       source: "",
       location: "",
       date: "",
@@ -452,6 +486,7 @@
     "IMG_31.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "nostalgia", "nature"],
       source: "",
       location: "",
       date: "",
@@ -463,6 +498,7 @@
     "IMG_32.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -474,6 +510,7 @@
     "IMG_33.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "color", "surreal", "shape"],
       source: "",
       location: "",
       date: "",
@@ -485,6 +522,7 @@
     "IMG_34.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "color", "texture", "shape"],
       source: "",
       location: "",
       date: "",
@@ -496,6 +534,7 @@
     "IMG_35.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "color", "texture"],
       source: "",
       location: "",
       date: "",
@@ -507,6 +546,7 @@
     "IMG_36.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["nature", "color", "personal"],
       source: "",
       location: "",
       date: "",
@@ -518,6 +558,7 @@
     "IMG_37.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -529,6 +570,7 @@
     "IMG_38.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["nature", "texture", "personal"],
       source: "",
       location: "",
       date: "",
@@ -540,6 +582,7 @@
     "IMG_39.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "surreal", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -551,6 +594,7 @@
     "IMG_40.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "playful"],
       source: "",
       location: "",
       date: "",
@@ -562,6 +606,7 @@
     "IMG_41.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "surreal", "shape", "color"],
       source: "",
       location: "",
       date: "",
@@ -573,6 +618,7 @@
     "IMG_42.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["playful", "collage", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -584,6 +630,7 @@
     "IMG_43.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "color", "texture"],
       source: "",
       location: "",
       date: "",
@@ -595,6 +642,7 @@
     "IMG_44.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["color", "shape", "possibility"],
       source: "",
       location: "",
       date: "",
@@ -606,6 +654,7 @@
     "IMG_45.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "color", "texture"],
       source: "",
       location: "",
       date: "",
@@ -617,6 +666,7 @@
     "IMG_46.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -628,6 +678,7 @@
     "IMG_47.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -639,6 +690,7 @@
     "IMG_48.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["architecture", "people", "negative-space"],
       source: "",
       location: "",
       date: "",
@@ -650,6 +702,7 @@
     "IMG_49.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["surreal", "playful", "odd"],
       source: "",
       location: "",
       date: "",
@@ -661,6 +714,7 @@
     "IMG_50.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["playful", "odd", "shape"],
       source: "",
       location: "",
       date: "",
@@ -672,6 +726,7 @@
     "IMG_51.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["shape", "texture", "personal"],
       source: "",
       location: "",
       date: "",
@@ -683,6 +738,7 @@
     "IMG_52.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "texture"],
       source: "",
       location: "",
       date: "",
@@ -694,6 +750,7 @@
     "IMG_53.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "people", "architecture"],
       source: "",
       location: "",
       date: "",
@@ -705,6 +762,7 @@
     "IMG_54.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["nature", "color", "playful", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -716,6 +774,7 @@
     "IMG_55.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["shape", "color", "possibility"],
       source: "",
       location: "",
       date: "",
@@ -727,6 +786,7 @@
     "IMG_56.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "social-play", "color"],
       source: "",
       location: "",
       date: "",
@@ -738,6 +798,7 @@
     "IMG_57.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "people", "color"],
       source: "",
       location: "",
       date: "",
@@ -749,6 +810,7 @@
     "IMG_58.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "color", "architecture"],
       source: "",
       location: "",
       date: "",
@@ -760,6 +822,7 @@
     "IMG_59.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "nature", "color"],
       source: "",
       location: "",
       date: "",
@@ -771,6 +834,7 @@
     "IMG_60.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["experimentation", "color", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -782,6 +846,7 @@
     "IMG_61.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "experimentation", "shape", "transformation"],
       source: "",
       location: "",
       date: "",
@@ -793,6 +858,7 @@
     "IMG_62.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "architecture", "people"],
       source: "",
       location: "",
       date: "",
@@ -804,6 +870,7 @@
     "IMG_63.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["color", "playful", "experimentation", "people"],
       source: "",
       location: "",
       date: "",
@@ -815,6 +882,7 @@
     "IMG_64.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["architecture", "personal", "people", "shape"],
       source: "",
       location: "",
       date: "",
@@ -826,6 +894,7 @@
     "IMG_65.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["texture", "color", "experimentation"],
       source: "",
       location: "",
       date: "",
@@ -837,6 +906,7 @@
     "IMG_66.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["surreal", "collage", "possibility", "color"],
       source: "",
       location: "",
       date: "",
@@ -848,6 +918,7 @@
     "IMG_67.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["color", "playful", "texture"],
       source: "",
       location: "",
       date: "",
@@ -859,6 +930,7 @@
     "IMG_68.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "typography", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -870,6 +942,7 @@
     "IMG_69.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "food", "playful"],
       source: "",
       location: "",
       date: "",
@@ -881,6 +954,7 @@
     "IMG_70.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["color", "playful", "experimentation", "people"],
       source: "",
       location: "",
       date: "",
@@ -892,6 +966,7 @@
     "IMG_71.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["nature", "people", "typography", "playful"],
       source: "",
       location: "",
       date: "",
@@ -903,6 +978,7 @@
     "IMG_72.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "playful", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -914,6 +990,7 @@
     "IMG_73.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["collage", "personal", "nostalgia", "texture"],
       source: "",
       location: "",
       date: "",
@@ -925,6 +1002,7 @@
     "IMG_74.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["architecture", "nostalgia", "color"],
       source: "",
       location: "",
       date: "",
@@ -936,6 +1014,7 @@
     "IMG_75.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["playful", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -947,6 +1026,7 @@
     "IMG_76.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "shape"],
       source: "",
       location: "",
       date: "",
@@ -958,6 +1038,7 @@
     "IMG_77.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["surreal", "nature", "odd"],
       source: "",
       location: "",
       date: "",
@@ -969,6 +1050,7 @@
     "IMG_78.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "people", "nature", "playful"],
       source: "",
       location: "",
       date: "",
@@ -980,6 +1062,7 @@
     "IMG_79.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["personal", "nature", "nostalgia"],
       source: "",
       location: "",
       date: "",
@@ -991,6 +1074,7 @@
     "IMG_80.jpeg": {
       caption: "",
       type: "primary",
+      tags: ["architecture", "typography", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1002,6 +1086,7 @@
     "IMG_81.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["nostalgia", "people", "playful", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -1013,6 +1098,7 @@
     "IMG_82.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["surreal", "architecture", "color", "odd"],
       source: "",
       location: "",
       date: "",
@@ -1024,6 +1110,7 @@
     "IMG_83.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["nostalgia", "people", "playful", "social-play"],
       source: "",
       location: "",
       date: "",
@@ -1035,6 +1122,7 @@
     "IMG_84.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1046,6 +1134,7 @@
     "IMG_85.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "color", "shape", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1057,6 +1146,7 @@
     "IMG_86.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "nature", "shape"],
       source: "",
       location: "",
       date: "",
@@ -1068,6 +1158,7 @@
     "IMG_87.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "negative-space", "possibility"],
       source: "",
       location: "",
       date: "",
@@ -1079,6 +1170,7 @@
     "IMG_88.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "texture", "color"],
       source: "",
       location: "",
       date: "",
@@ -1090,6 +1182,7 @@
     "IMG_89.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["shape", "texture", "experimentation"],
       source: "",
       location: "",
       date: "",
@@ -1101,6 +1194,7 @@
     "IMG_90.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["color", "shape", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1112,6 +1206,7 @@
     "IMG_91.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["texture", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -1123,6 +1218,7 @@
     "IMG_92.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["color", "shape", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1134,6 +1230,7 @@
     "IMG_93.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["color", "shape", "possibility"],
       source: "",
       location: "",
       date: "",
@@ -1145,6 +1242,7 @@
     "IMG_94.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["collage", "nature", "color", "texture"],
       source: "",
       location: "",
       date: "",
@@ -1156,6 +1254,7 @@
     "IMG_95.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["architecture", "shape", "negative-space", "people"],
       source: "",
       location: "",
       date: "",
@@ -1167,6 +1266,7 @@
     "IMG_96.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["shape", "texture", "possibility"],
       source: "",
       location: "",
       date: "",
@@ -1178,6 +1278,7 @@
     "IMG_97.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "collage", "playful"],
       source: "",
       location: "",
       date: "",
@@ -1189,6 +1290,7 @@
     "IMG_98.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "shape", "color"],
       source: "",
       location: "",
       date: "",
@@ -1200,6 +1302,7 @@
     "IMG_99.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "negative-space"],
       source: "",
       location: "",
       date: "",
@@ -1211,6 +1314,7 @@
     "IMG_100.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "shape"],
       source: "",
       location: "",
       date: "",
@@ -1222,6 +1326,7 @@
     "IMG_101.jpeg": {
       caption: "",
       type: "secondary",
+      tags: ["typography", "color", "shape"],
       source: "",
       location: "",
       date: "",
@@ -1269,6 +1374,7 @@
       // manually-edited, displayed metadata (see METADATA above)
       caption: meta.caption || "",
       type: meta.type || "secondary",
+      tags: meta.tags || [],
       keptBecause: meta.keptBecause || "",
       source: meta.source || "",
       location: meta.location || "",
