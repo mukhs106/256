@@ -1,26 +1,30 @@
 /* ------------------------------------------------------------------
    modes/just-see-what-happens.js
-   "JUST SEE WHAT HAPPENS" — architecture stub, no behavior yet.
-
-   Registers with ModeManager so its symbol already switches cleanly.
-   Build the actual interaction inside enter()/exit(): add listeners
-   with ctx.on(...), temporary DOM with ctx.addTempNode(...), a running
-   effect with ctx.loop(...)/ctx.interval(...) — all of it is undone
-   automatically the moment another symbol is chosen. Keep this mode's
-   own state on ctx.scratch, and read the archive only through
-   ctx.archive (ctx.archive.getImages() is the permanent photo data —
-   never mutate it from here).
+   "JUST SEE WHAT HAPPENS" — the archive's own image-to-image wandering
+   path, exactly as it already exists: select a photo, the isolation
+   view's flanking paths offer a small handful of loosely-related next
+   images (same color, same mood, same subject, kept for a similar
+   reason, around the same time — see defaultAssociations() in app.js),
+   picking one continues the trail. Nothing about that needs building —
+   it's already the archive's default way of connecting one photo to
+   another — so this mode deliberately doesn't override
+   ArchiveAPI.setAssociationStrategy the way NO POINT and WHAT ELSE
+   COULD IT BE? do. Selecting this symbol just says "yes, this is the
+   lens" without changing anything underneath it, which is the point:
+   no intervention, see what happens.
 ------------------------------------------------------------------- */
 (function () {
   ModeManager.register("just-see-what-happens", {
     label: "JUST SEE WHAT HAPPENS",
 
     enter(ctx) {
-      // TODO: build this mode's interaction here.
+      // Intentionally no-op — see file header. The default,
+      // already-loose association trail (restored by resetView() on
+      // every mode switch) is exactly this mode's behavior.
     },
 
     exit(ctx) {
-      // TODO: anything beyond what ctx's auto-cleanup already undoes.
+      // Nothing to undo.
     },
   });
 })();
