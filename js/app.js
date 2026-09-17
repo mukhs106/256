@@ -157,6 +157,7 @@
     photo.alt = "";
     photo.loading = "lazy";
     photo.decoding = "async";
+    photo.draggable = false; // the browser's native image-drag ghost would fight PLAY WITH THE RULES' own dragging
     frame.appendChild(photo);
     el.appendChild(frame);
 
@@ -564,15 +565,23 @@
     showMeta,
     hideMeta,
     setAutoExtend(on) { autoExtendEnabled = !!on; },
-    // The reset hook ModeManager calls on every mode switch, before the
-    // next mode (if any) enters: rebuilds the canvas straight from the
-    // permanent image data, discarding whatever the previous mode did
-    // to the DOM (dragged positions, temporary elements, added
-    // classes...) without ever touching that underlying data itself.
-    resetView() {
-      autoExtendEnabled = true;
+    // Rebuilds the canvas straight from the permanent image data,
+    // discarding whatever's currently been done to the DOM (dragged
+    // positions, temporary elements, added classes...) without ever
+    // touching that underlying data itself. A mode can call this itself
+    // to offer an in-place "restore the arrangement" moment without
+    // leaving the mode (see e.g. play-with-the-rules.js's double-click
+    // reset); ModeManager also calls it on every mode switch, via
+    // resetView() below.
+    rerender() {
       renderCanvas();
       hideMeta();
+    },
+    // The reset hook ModeManager calls on every mode switch, before the
+    // next mode (if any) enters.
+    resetView() {
+      autoExtendEnabled = true;
+      this.rerender();
     },
   };
 
