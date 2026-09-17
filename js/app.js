@@ -345,7 +345,9 @@
       const btn = document.createElement("button");
       btn.className = "path-btn";
       btn.style.transform = `translateX(${shift}px)`;
-      btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span><span class="path-label">${p.label}</span>`;
+      btn.title = p.label;
+      btn.setAttribute("aria-label", p.label);
+      btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span>`;
       btn.addEventListener("click", () => {
         state.trail.push(p.image.id);
         state.isolatedId = p.image.id;
