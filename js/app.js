@@ -157,6 +157,7 @@
     photo.alt = "";
     photo.loading = "lazy";
     photo.decoding = "async";
+    photo.draggable = false; // the browser's native image-drag ghost would fight PLAY WITH THE RULES' own dragging
     frame.appendChild(photo);
     el.appendChild(frame);
 
@@ -397,7 +398,27 @@
 
   // ---------- isolation view ----------
 
+  // A mode can swap out which images get suggested when the viewer
+  // opens a photo, without touching how they're shown — see
+  // ArchiveAPI.setAssociationStrategy below. null means "use the
+  // archive's own loose-association trail" (defaultAssociations).
+  // Reset to null on every mode switch by resetView(), so a mode never
+  // has to clean this up itself.
+  let associationStrategy = null;
+
   function computeAssociations(img) {
+    if (associationStrategy) {
+      try {
+        const result = associationStrategy(img, images, state.trail);
+        if (Array.isArray(result) && result.length) return result;
+      } catch (e) {
+        console.error("[association strategy]", e);
+      }
+    }
+    return defaultAssociations(img);
+  }
+
+  function defaultAssociations(img) {
     const pool = images.filter((i) => i.id !== img.id);
     const notInTrail = pool.filter((i) => !state.trail.includes(i.id));
     const source = notInTrail.length ? notInTrail : pool;
@@ -565,15 +586,36 @@
     showMeta,
     hideMeta,
     setAutoExtend(on) { autoExtendEnabled = !!on; },
-    // The reset hook ModeManager calls on every mode switch, before the
-    // next mode (if any) enters: rebuilds the canvas straight from the
-    // permanent image data, discarding whatever the previous mode did
-    // to the DOM (dragged positions, temporary elements, added
-    // classes...) without ever touching that underlying data itself.
-    resetView() {
-      autoExtendEnabled = true;
+    // Lets a mode change which images get suggested when the viewer
+    // opens a photo (the isolation view's flanking "paths" + trail —
+    // see computeAssociations above), without touching how that view
+    // itself works. `fn(img, images, trail)` should return an array of
+    // { label, image } pairs, same shape as the default algorithm; an
+    // empty/invalid result quietly falls back to the default. Pass
+    // null/omit to go back to the default. Reset to null automatically
+    // on every mode switch (see resetView below), so a mode never has
+    // to restore it on its way out.
+    setAssociationStrategy(fn) {
+      associationStrategy = typeof fn === "function" ? fn : null;
+    },
+    // Rebuilds the canvas straight from the permanent image data,
+    // discarding whatever's currently been done to the DOM (dragged
+    // positions, temporary elements, added classes...) without ever
+    // touching that underlying data itself. A mode can call this itself
+    // to offer an in-place "restore the arrangement" moment without
+    // leaving the mode (see e.g. play-with-the-rules.js's double-click
+    // reset); ModeManager also calls it on every mode switch, via
+    // resetView() below.
+    rerender() {
       renderCanvas();
       hideMeta();
+    },
+    // The reset hook ModeManager calls on every mode switch, before the
+    // next mode (if any) enters.
+    resetView() {
+      autoExtendEnabled = true;
+      associationStrategy = null;
+      this.rerender();
     },
   };
 

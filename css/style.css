@@ -653,6 +653,63 @@ body.isolating .meta-caption {
   background-color: var(--yellow-hover);
 }
 
+/* ---------------- mode hooks ----------------
+   Scoped by the data-mode attribute ModeManager sets on <body>, so
+   these only apply while their mode is active and never touch the
+   plain archive. */
+
+/* PLAY WITH THE RULES — pick-up-and-move cards (js/modes/play-with-the-rules.js) */
+body[data-mode="play-with-the-rules"] .photo-card {
+  cursor: grab;
+  touch-action: none;
+}
+
+body[data-mode="play-with-the-rules"] .photo-card.dragging {
+  cursor: grabbing;
+  z-index: 9999 !important;
+}
+
+body[data-mode="play-with-the-rules"] .photo-card.dragging .photo-frame {
+  box-shadow: 0 20px 40px -14px rgba(0, 0, 0, 0.45), 0 6px 14px rgba(0, 0, 0, 0.16);
+  outline-color: var(--yellow);
+}
+
+/* LOSE TRACK OF TIME — the wandering curiosity lure (js/modes/lose-track-of-time.js) */
+.wander-lure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 72; /* above ordinary cards, still under the toolbar's 80 */
+  pointer-events: none;
+  opacity: 0.7;
+  will-change: transform;
+}
+
+.wander-lure svg {
+  display: block;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.wander-lure-wings ellipse {
+  fill: var(--yellow);
+  opacity: 0.55;
+  animation: wanderFlutter 0.5s ease-in-out infinite;
+}
+
+.wander-lure-wings ellipse:nth-child(2) {
+  animation-delay: -0.25s;
+}
+
+.wander-lure-body {
+  fill: var(--ink-soft);
+}
+
+@keyframes wanderFlutter {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.22; }
+}
+
 /* ---------------- responsive ---------------- */
 
 @media (max-width: 820px) {
