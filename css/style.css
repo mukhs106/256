@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------------
    256 — a camera roll, mostly
-   Visual language: white ground, black ink, a playful display face
-   (Barriecito) for headings/titles/captions against a quiet Inter body,
-   a spaced-out scattered library, and a yellow interaction accent —
-   the one spot of color, reserved for hover states, tying back to the
-   idea of a highlighter dragged across something worth a second look.
+   Visual language: one monospace voice (DM Mono) for everything, a
+   spaced-out scattered library on a warm, faintly grained ground, and
+   a single interaction accent (#F5BD33) reserved for hover states —
+   tying back to the idea of a highlighter dragged across something
+   worth a second look.
 ------------------------------------------------------------------- */
 
 :root {
@@ -14,16 +14,21 @@
   --ink-faint: #9a9a9a;
   --line: #e8e8e8;
   --card-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.08);
-  --sidebar-w: 240px;
 
-  /* type */
-  --font-display: "Barriecito", "Comic Sans MS", cursive;
-  --font-body: "Inter", Helvetica, Arial, sans-serif;
-  --font: var(--font-body); /* legacy alias */
+  /* type — one family throughout; hierarchy comes from size/weight/
+     spacing, not a second typeface */
+  --font: "DM Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-display: var(--font); /* legacy alias, kept so nothing else needs renaming */
+  --font-body: var(--font);
+  --weight-regular: 400;
+  --weight-medium: 500;
 
-  /* the one accent color, used only for hover */
-  --yellow: #ffcc00;
-  --yellow-hover: rgba(255, 204, 0, 0.4);
+  /* the one accent color, used only for hover/interaction states */
+  --yellow: #f5bd33;
+  --yellow-hover: rgba(245, 189, 51, 0.4);
+
+  /* background grain — independent, low-opacity, easy to tune later */
+  --grain-opacity: 0.05;
 }
 
 * { box-sizing: border-box; }
@@ -35,9 +40,27 @@ html, body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 15px;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-regular);
+  font-size: 14px;
+  letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Warm, faint grain across the page background. Fixed + pointer-events:
+   none so it never intercepts input, and painted before .app in the box
+   order (both positioned, z-index:auto) so it always sits behind the
+   interface without needing a z-index fight. Turn it up/down with
+   --grain-opacity above; the sepia/saturate pair is what gives the
+   (naturally greyscale) noise its warm cast. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  filter: sepia(0.65) saturate(2) brightness(1.08);
 }
 
 button {
@@ -57,67 +80,36 @@ button {
   position: relative;
 }
 
-.sidebar-toggle {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 90;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  font-size: 15px;
-  color: var(--ink);
-}
-
-.sidebar-toggle:hover {
-  background-color: var(--yellow-hover);
-  border-color: var(--ink);
-}
-
-/* ---------------- sidebar ---------------- */
-
-.sidebar {
-  width: var(--sidebar-w);
-  flex: 0 0 var(--sidebar-w);
-  background: var(--paper);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  padding: 20px 14px;
-  padding-bottom: 320px;
-  overflow-y: auto;
-}
-
-/* ---------------- icon nav (category symbols) ---------------- */
+/* ---------------- icon nav (category symbols) ----------------
+   Flattened on purpose: all six symbols and the brand block are direct
+   siblings in one space-between row, so the gaps between all seven
+   items come out approximately equal — evenly spread across the full
+   header width rather than clustered into two tight trios at the
+   edges. */
 
 .icon-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   width: 100%;
 }
 
-.icon-nav-group {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  flex: 1 1 0;
-}
-
-.icon-nav-group:last-child {
-  justify-content: flex-end;
-}
-
 .nav-symbol {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  /* the rest of the toolbar is pointer-events:none so its text can't
+     block the canvas below; these specific boxes opt back in so they
+     can be hovered/focused — the box itself doubles as the (generous)
+     click target, so it grows along with the visual symbol size */
+  pointer-events: auto;
+  cursor: pointer;
+  outline: none;
 }
 
 .nav-symbol img {
@@ -127,6 +119,68 @@ button {
   width: auto;
   height: auto;
   object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+
+/* Hover halo — sized larger than the 52x52 box via an absolutely
+   positioned pseudo-element, so the glow can breathe without ever
+   changing the box's own dimensions (no layout shift). */
+.nav-symbol::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: var(--yellow-hover);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.nav-symbol:hover::before,
+.nav-symbol:focus-visible::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes symbolWiggle {
+  0% { transform: rotate(0deg); }
+  22% { transform: rotate(-9deg); }
+  48% { transform: rotate(8deg); }
+  72% { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.nav-symbol:hover img,
+.nav-symbol:focus-visible img {
+  animation: symbolWiggle 0.45s ease-in-out 1;
+}
+
+/* The category name — a mysterious invitation, not a persistent label.
+   Absolutely positioned so revealing it never shifts the symbol row or
+   anything below it. */
+.nav-symbol-label {
+  --label-shift: 0px; /* nudged by JS so long labels near an edge don't get clipped by .main's overflow:hidden */
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translate(calc(-50% + var(--label-shift)), -3px);
+  white-space: nowrap;
+  font-size: 8.5px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.nav-symbol:hover .nav-symbol-label,
+.nav-symbol:focus-visible .nav-symbol-label {
+  opacity: 1;
+  transform: translate(calc(-50% + var(--label-shift)), 0);
 }
 
 .brand {
@@ -137,112 +191,19 @@ button {
 
 .brand-name {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 28px;
+  font-weight: var(--weight-medium);
+  font-size: 20px;
+  letter-spacing: 0.01em;
   line-height: 1.1;
   color: var(--ink);
 }
 
 .brand-sub {
   font-family: var(--font-body);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
   color: var(--ink-faint);
   margin-top: 5px;
-}
-
-.nav-section {
-  margin-bottom: 22px;
-}
-
-.nav-label {
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  padding: 0 8px 7px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 8px;
-  text-align: left;
-  line-height: 1.3;
-}
-
-.nav-item:hover {
-  background-color: var(--yellow-hover);
-  color: var(--ink);
-}
-
-.nav-item.active {
-  background: rgba(0, 0, 0, 0.07);
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.nav-item-preview {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  background-color: var(--line);
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.nav-item-name {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.nav-item-title {
-  display: block;
-}
-
-.nav-item-tag {
-  display: block;
-  font-size: 9.5px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-}
-
-.nav-item.active .nav-item-tag {
-  color: var(--ink-soft);
-}
-
-.shuffle-btn {
-  border: 1px dashed var(--line);
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 7px 10px;
-  width: 100%;
-}
-
-.shuffle-btn:hover {
-  border-color: var(--ink);
-  color: var(--ink);
-  background-color: var(--yellow-hover);
 }
 
 /* ---------------- main ---------------- */
@@ -261,68 +222,22 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 28px 0;
-  height: 150px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 55%, rgba(255, 255, 255, 0) 100%);
+  /* Comfortably above a photo card's max base z-index (10 + 40 random +
+     20 large-bonus = 70) — with genuinely open-ended scroll, some card
+     sits in the header's band at nearly every scroll position, and it
+     must fade under the header rather than paint over its text/icons. */
+  z-index: 80;
+  padding: 22px 32px 0;
+  height: 132px;
+  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 60%, rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
-  flex-wrap: wrap;
-}
-
-.toolbar-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.toolbar-left {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 38%;
-  min-width: 0;
-}
-
-.collection-title {
-  font-family: var(--font-display);
-  font-size: 26px;
-  margin: 0;
-  font-weight: 400;
-  line-height: 1.15;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.collection-blurb {
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--ink-faint);
-  font-style: italic;
-}
-
-.collection-count {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  text-align: right;
-  white-space: nowrap;
 }
 
 .canvas-wrap {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 124px 20px 60px;
+  padding: 108px 20px 60px;
 }
 
 .canvas {
@@ -388,71 +303,138 @@ button {
   text-overflow: ellipsis;
 }
 
-/* ---------------- metadata panel ---------------- */
+/* ---------------- metadata panel ----------------
+   A small floating note beside whichever image is selected — not a
+   dashboard. JS sets left/top per image (positionMetaPanel in app.js);
+   this just handles its own look and its show/hide transition. */
 
 .meta-panel {
   position: fixed;
   left: 0;
-  bottom: 0;
-  width: var(--sidebar-w);
-  height: 240px;
-  background: var(--paper);
+  top: 0;
+  max-width: min(230px, calc(100vw - 28px));
+  background: rgba(255, 255, 255, 0.96);
   color: var(--ink);
-  padding: 14px 14px 16px;
-  font-size: 11.5px;
-  z-index: 2000;
-  overflow: hidden;
-  border-top: 2px solid var(--ink);
-  border-right: 1px solid var(--line);
-  box-shadow: 0 -6px 18px -12px rgba(0, 0, 0, 0.25);
+  padding: 12px 14px;
+  font-size: 11px;
+  z-index: 150;
+  pointer-events: none;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.meta-panel.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .meta-caption {
   font-family: var(--font-display);
-  font-size: 15px;
-  line-height: 1.25;
-  color: var(--ink);
-  min-height: 19px;
-  margin-bottom: 10px;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-.meta-grid {
+.meta-caption[hidden] {
+  display: none;
+}
+
+/* Primary: kept because / connection / returned to — always labeled,
+   the strongest text in the panel. */
+.meta-primary {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .meta-field {
   display: flex;
-  gap: 4px;
-  line-height: 14px;
-  white-space: nowrap;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .meta-key {
-  flex: 0 0 auto;
   font-family: var(--font-body);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 8.5px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .meta-val {
-  flex: 1 1 auto;
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
   color: var(--ink);
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* "returned to" is still a primary field (always labeled) but quieter
+   than kept-because/connection, which carry the most emphasis. */
+.meta-field-quiet .meta-val {
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  color: var(--ink-soft);
+}
+
+/* Secondary: when / where / source — quieter, and only present at all
+   when at least one of them has content (toggled via [hidden] in JS). */
+.meta-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.meta-secondary[hidden] {
+  display: none;
+}
+
+.meta-field-sm {
+  display: flex;
+  gap: 5px;
+  line-height: 13px;
   white-space: nowrap;
+  overflow: hidden;
+}
+
+.meta-field-sm[hidden] {
+  display: none;
+}
+
+.meta-key-sm {
+  flex: 0 0 auto;
+  font-family: var(--font-body);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.meta-val-sm {
+  flex: 1 1 auto;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------------- isolation view ---------------- */
@@ -585,43 +567,95 @@ button {
   text-align: center;
 }
 
+/* ---------------- info button + panel ---------------- */
+/* Sits roughly where the old fixed metadata dock used to live, bottom
+   left — a small, restrained "clue" rather than a conventional modal. */
+
+.info-btn {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 160;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: var(--weight-medium);
+  font-size: 14px;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+}
+
+.info-btn:hover,
+.info-btn[aria-expanded="true"] {
+  box-shadow: 0 0 0 7px var(--yellow-hover), 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+}
+
+.info-panel {
+  position: fixed;
+  left: 24px;
+  bottom: 70px;
+  z-index: 160;
+  width: min(260px, calc(100vw - 48px));
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.3);
+  padding: 18px 20px;
+}
+
+.info-panel[hidden] {
+  display: none;
+}
+
+.info-panel p {
+  margin: 0 0 10px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.info-panel p:last-child {
+  margin-bottom: 0;
+}
+
+.info-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 11px;
+  border-radius: 50%;
+}
+
+.info-panel-close:hover {
+  color: var(--ink);
+  background-color: var(--yellow-hover);
+}
+
 /* ---------------- responsive ---------------- */
 
 @media (max-width: 820px) {
-  .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+  .toolbar { height: auto; padding: 16px 20px; }
 
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-    z-index: 80;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.12);
-  }
+  .icon-nav { flex-wrap: wrap; justify-content: center; row-gap: 12px; }
 
-  .app.sidebar-open .sidebar {
-    transform: translateX(0);
-  }
+  /* Forces the title onto its own centered row between the two rows of
+     three symbols, however the flex-wrap happens to break otherwise. */
+  .brand { flex-basis: 100%; }
 
-  .toolbar { padding-left: 56px; height: auto; padding-bottom: 10px; gap: 8px; }
+  .brand-name { font-size: 16px; }
 
-  .icon-nav { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
+  .brand-sub { font-size: 9px; }
 
-  .icon-nav-group { gap: 10px; flex: 0 0 auto; }
-
-  .icon-nav-group:last-child { justify-content: center; }
-
-  .toolbar-row { padding-top: 2px; }
-
-  .toolbar-left { max-width: 52%; }
-
-  .collection-title { font-size: 17px; }
-
-  .brand-name { font-size: 19px; }
-
-  .brand-sub { font-size: 9.5px; }
-
-  .canvas-wrap { padding-top: 150px; }
+  .canvas-wrap { padding-top: 190px; }
 
   .isolation-stage {
     flex-direction: column;
