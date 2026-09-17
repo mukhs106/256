@@ -533,9 +533,8 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // Metadata for the isolated photo floats beside the stage image,
-    // the same way it floats beside a hovered card in the canvas.
-    applyMetaPanel(img, stage);
+    // The isolation view has no metadata dock beside it.
+    setMetaPanel(null);
 
     renderTrail();
     renderPaths(img);
@@ -545,11 +544,13 @@
     state.trail = [img.id];
     state.isolatedId = img.id;
     document.getElementById("isolation").hidden = false;
+    document.body.classList.add("isolating");
     renderIsolation(img);
   }
 
   function closeIsolation() {
     document.getElementById("isolation").hidden = true;
+    document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
     hideMetaPanel();
