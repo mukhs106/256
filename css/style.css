@@ -90,12 +90,48 @@ button {
   overflow-y: auto;
 }
 
+/* ---------------- icon nav (category symbols) ---------------- */
+
+.icon-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.icon-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex: 1 1 0;
+}
+
+.icon-nav-group:last-child {
+  justify-content: flex-end;
+}
+
+.nav-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.nav-symbol img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
 .brand {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   text-align: center;
+  flex: 0 0 auto;
   pointer-events: none;
 }
 
@@ -227,13 +263,20 @@ button {
   right: 0;
   z-index: 5;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 28px 0;
+  height: 150px;
+  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 55%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+  flex-wrap: wrap;
+}
+
+.toolbar-row {
+  display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 28px 0;
-  height: 108px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 35%, rgba(255, 255, 255, 0) 100%);
-  pointer-events: none;
   flex-wrap: wrap;
 }
 
@@ -279,7 +322,7 @@ button {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 82px 20px 60px;
+  padding: 124px 20px 60px;
 }
 
 .canvas {
@@ -566,7 +609,15 @@ button {
     transform: translateX(0);
   }
 
-  .toolbar { padding-left: 56px; height: 92px; }
+  .toolbar { padding-left: 56px; height: auto; padding-bottom: 10px; gap: 8px; }
+
+  .icon-nav { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
+
+  .icon-nav-group { gap: 10px; flex: 0 0 auto; }
+
+  .icon-nav-group:last-child { justify-content: center; }
+
+  .toolbar-row { padding-top: 2px; }
 
   .toolbar-left { max-width: 52%; }
 
@@ -575,6 +626,8 @@ button {
   .brand-name { font-size: 19px; }
 
   .brand-sub { font-size: 9.5px; }
+
+  .canvas-wrap { padding-top: 150px; }
 
   .isolation-stage {
     flex-direction: column;
