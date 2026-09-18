@@ -175,9 +175,18 @@
   const CHUNK_BUFFER = 0; // extra ring of chunks preloaded beyond the visible viewport; ensureChunksLoaded
                           // re-runs every frame while panning (see scheduleChunkCheck), so a large buffer
                           // isn't needed to avoid pop-in and would just multiply the DOM footprint
+  const CHUNKS_PER_PASS = 2; // caps how many new chunks (each ~dozens of DOM nodes) ensureChunksLoaded
+                              // creates per call — zooming out (or a fast pan) can suddenly need many new
+                              // chunks at once, and generating all of them synchronously in one frame is
+                              // exactly what made zoom/pan feel laggy; capping the batch and letting
+                              // scheduleChunkCheck() re-run on the next frame spreads that cost out instead
   const MIN_ZOOM = 0.4;
   const MAX_ZOOM = 2.2;
   const ZOOM_STEP = 1.25;
+  // The initial/default view, and what title/subtitle's reset returns to
+  // — derived from "zoom out twice" rather than a hardcoded number, so
+  // it stays correct if ZOOM_STEP ever changes.
+  const DEFAULT_ZOOM = 1 / (ZOOM_STEP * ZOOM_STEP);
   const DRAG_THRESHOLD = 4; // px of movement before a pointer-down counts as a drag, not a click
 
   let canvasEl = null;
@@ -188,6 +197,25 @@
   const chunks = new Map(); // "cx,cy" -> chunk element
   let chunkCheckQueued = false;
   let autoExtendEnabled = true; // modes can pause automatic chunk generation via ArchiveAPI.setAutoExtend
+
+  // canvasWrapEl's own viewport box, read once (a real layout read —
+  // getBoundingClientRect/clientWidth force the browser to flush any
+  // pending layout) and cached rather than re-read on every zoom click
+  // or wheel event. With a large field of chunks mounted, that forced
+  // flush was the actual cost behind zoom feeling laggy — the chunk
+  // generation itself only ever took a few ms; re-reading layout on
+  // every click was what turned it into a 50-70ms blocking task.
+  // Updated on init and on window resize, the only two times this
+  // box's screen position/size can actually change.
+  let wrapWidth = 0, wrapHeight = 0, wrapLeft = 0, wrapTop = 0, toolbarHeight = 0;
+  function updateWrapMetrics() {
+    const rect = canvasWrapEl.getBoundingClientRect();
+    wrapWidth = rect.width;
+    wrapHeight = rect.height;
+    wrapLeft = rect.left;
+    wrapTop = rect.top;
+    toolbarHeight = toolbarEl ? toolbarEl.offsetHeight : 0; // also a layout-forcing read — cached alongside for the same reason
+  }
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
@@ -300,23 +328,34 @@
     return { x: (sx - pan.x) / zoom, y: (sy - pan.y) / zoom };
   }
 
-  // Generates any chunks now needed to cover the viewport (plus a
-  // buffer ring) and drops any chunk outside that range — the range
-  // itself is the cap, so DOM size stays bounded by viewport/zoom
-  // rather than by how far or how long the user has wandered.
+  // Generates chunks now needed to cover the viewport (plus a buffer
+  // ring) and drops any chunk outside that range — the range itself is
+  // the cap, so DOM size stays bounded by viewport/zoom rather than by
+  // how far or how long the user has wandered.
+  //
+  // Generation is capped at CHUNKS_PER_PASS per call rather than filling
+  // the whole missing range in one synchronous pass: a single zoom-out
+  // step (or a fast pan) can suddenly need many new chunks — each one
+  // dozens of real DOM nodes — and building all of them in one frame is
+  // exactly what showed up as long, blocking main-thread tasks (measured
+  // 50-70ms) during zoom. Stopping early and re-scheduling another pass
+  // for whatever's still missing spreads that same total work over a
+  // few frames instead, so no single frame does more than a small,
+  // bounded amount of it.
   function ensureChunksLoaded() {
     if (!autoExtendEnabled) return; // a mode can pause automatic chunk generation via ArchiveAPI.setAutoExtend
-    const w = canvasWrapEl.clientWidth, h = canvasWrapEl.clientHeight;
     const topLeft = screenToWorld(0, 0);
-    const bottomRight = screenToWorld(w, h);
+    const bottomRight = screenToWorld(wrapWidth, wrapHeight);
     const minCx = Math.floor(topLeft.x / CHUNK) - CHUNK_BUFFER;
     const maxCx = Math.floor(bottomRight.x / CHUNK) + CHUNK_BUFFER;
     const minCy = Math.floor(topLeft.y / CHUNK) - CHUNK_BUFFER;
     const maxCy = Math.floor(bottomRight.y / CHUNK) + CHUNK_BUFFER;
 
-    for (let cy = minCy; cy <= maxCy; cy++) {
-      for (let cx = minCx; cx <= maxCx; cx++) {
-        if (!chunks.has(cx + "," + cy)) generateChunk(cx, cy);
+    let generated = 0;
+    for (let cy = minCy; cy <= maxCy && generated < CHUNKS_PER_PASS; cy++) {
+      for (let cx = minCx; cx <= maxCx && generated < CHUNKS_PER_PASS; cx++) {
+        const key = cx + "," + cy;
+        if (!chunks.has(key)) { generateChunk(cx, cy); generated++; }
       }
     }
 
@@ -325,6 +364,14 @@
       if (cx < minCx || cx > maxCx || cy < minCy || cy > maxCy) {
         el.remove();
         chunks.delete(key);
+      }
+    }
+
+    // Anything the budget above didn't get to yet? Cheap to re-check
+    // (Map lookups only, no DOM work) — pick up the rest next frame.
+    for (let cy = minCy; cy <= maxCy; cy++) {
+      for (let cx = minCx; cx <= maxCx; cx++) {
+        if (!chunks.has(cx + "," + cy)) { scheduleChunkCheck(); return; }
       }
     }
   }
@@ -348,8 +395,7 @@
   }
 
   function zoomFromButton(factor) {
-    const rect = canvasWrapEl.getBoundingClientRect();
-    zoomAt(factor, rect.width / 2, rect.height / 2);
+    zoomAt(factor, wrapWidth / 2, wrapHeight / 2);
   }
 
   // ---------- drag / wheel panning ----------
@@ -406,8 +452,7 @@
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
       // Trackpad pinch (browsers report it as a ctrl+wheel) or ctrl+wheel.
-      const rect = canvasWrapEl.getBoundingClientRect();
-      zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - rect.left, e.clientY - rect.top);
+      zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - wrapLeft, e.clientY - wrapTop);
     } else {
       pan.x -= e.deltaX;
       pan.y -= e.deltaY;
@@ -422,9 +467,9 @@
   function resetField() {
     canvasEl.innerHTML = "";
     chunks.clear();
-    pan.x = canvasWrapEl.clientWidth / 2;
-    pan.y = (toolbarEl ? toolbarEl.offsetHeight : 0) + 24;
-    zoom = 1;
+    pan.x = wrapWidth / 2;
+    pan.y = toolbarHeight + 24;
+    zoom = DEFAULT_ZOOM;
     applyTransform();
     ensureChunksLoaded();
   }
@@ -616,7 +661,7 @@
     // freely instead of just scrolling down (see modes/lose-track-of-time.js).
     getViewportBounds() {
       const topLeft = screenToWorld(0, 0);
-      const bottomRight = screenToWorld(canvasWrapEl.clientWidth, canvasWrapEl.clientHeight);
+      const bottomRight = screenToWorld(wrapWidth, wrapHeight);
       return { left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y };
     },
     openIsolation,
@@ -672,10 +717,28 @@
     canvasWrapEl = document.getElementById("canvas-wrap");
     toolbarEl = document.querySelector(".toolbar");
 
+    updateWrapMetrics();
     resetField();
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
+
+    // Title/subtitle == reset to the site's fresh/default state. A true
+    // reload (rather than an in-app state reset) is deliberate: between
+    // the mode system, the pan/zoom camera, and each effect's own
+    // transient DOM/timers (duplicates' clusters, cursor-trail's stuck
+    // traces, magnet's grab state, drift's springs...), there's no
+    // single place that owns "everything temporary" to tear down by
+    // hand — a reload is the only way to guarantee all of it, including
+    // zoom/pan, actually returns to first-load state.
+    const brandHome = document.getElementById("brand-home");
+    brandHome.addEventListener("click", () => window.location.reload());
+    brandHome.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        window.location.reload();
+      }
+    });
 
     canvasWrapEl.addEventListener("pointerdown", onPointerDown);
     canvasWrapEl.addEventListener("wheel", onWheel, { passive: false });
@@ -712,7 +775,7 @@
       if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
     });
 
-    window.addEventListener("resize", debounce(() => { resetField(); }, 200));
+    window.addEventListener("resize", debounce(() => { updateWrapMetrics(); resetField(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);

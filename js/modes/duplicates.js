@@ -27,12 +27,21 @@
        all of them in one pass, before archive.resetView() rebuilds the
        real cards fresh — nothing about a duplicate ever touches the
        archive's own image data or the layout's column bookkeeping.
+     - Each new duplicate also renders slightly larger than the last,
+       via GROWTH_PER_DUP below — sized off the true original's own
+       (unscaled) width/height via archive.cardFor(originId), never off
+       whichever copy was actually clicked, so the growth stays a
+       steady, predictable step per duplicate regardless of click order
+       instead of compounding when someone clicks an already-enlarged
+       copy.
 ------------------------------------------------------------------- */
 (function () {
   const MAX_PER_ORIGIN = 20;
   const OFFSET_MIN = 22; // px, how far the earliest duplicates land from their source
   const OFFSET_MAX = 52; // px, how far duplicates land once a cluster has grown — spreads out more as it builds up
   const ROTATION_MAX = 10; // deg, grows alongside the offset for the same "increasingly playful" reason
+  const GROWTH_PER_DUP = 0.08; // each duplicate renders ~8% larger than the original, per duplicate already spawned
+  const MAX_GROWTH = 2.2; // hard cap on that growth — visibly larger over a long cluster, never "giant"
 
   // A duplicate always points back to the original photo it traces to,
   // never to whichever copy happened to get clicked.
@@ -69,6 +78,15 @@
         const offsetRange = OFFSET_MIN + (OFFSET_MAX - OFFSET_MIN) * grown;
         const rotation = (Math.random() * 2 - 1) * ROTATION_MAX * (0.3 + 0.7 * grown);
 
+        // Sized off the true original's own base width/height, not the
+        // clicked source's (which may itself already be an enlarged
+        // duplicate) — see the file-header note above.
+        const original = ctx.archive.cardFor(originId);
+        const baseFrame = original && original.querySelector(".photo-frame");
+        const baseWidth = original ? (parseFloat(original.style.width) || 0) : 0;
+        const baseHeight = baseFrame ? (parseFloat(baseFrame.style.height) || 0) : 0;
+        const scale = Math.min(MAX_GROWTH, 1 + count * GROWTH_PER_DUP);
+
         const clone = source.cloneNode(true);
         clone.classList.add("duplicate-card");
         delete clone.dataset.id;
@@ -77,6 +95,11 @@
         clone.style.top = (top + (Math.random() * 2 - 1) * offsetRange) + "px";
         clone.style.zIndex = String(zCounter++);
         clone.style.setProperty("--duplicate-rot", rotation.toFixed(1) + "deg");
+        if (baseWidth && baseHeight) {
+          clone.style.width = (baseWidth * scale).toFixed(1) + "px";
+          const cloneFrame = clone.querySelector(".photo-frame");
+          if (cloneFrame) cloneFrame.style.height = (baseHeight * scale).toFixed(1) + "px";
+        }
 
         ctx.addTempNode(clone, canvasEl);
         counts.set(originId, count + 1);

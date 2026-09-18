@@ -121,6 +121,15 @@ button {
   object-fit: contain;
   position: relative;
   z-index: 1;
+  /* Sizing hierarchy: unselected symbols sit at a smaller default size
+     and grow to their full (current/original) size once active — the
+     inverse of shrinking on activation, so the active symbol reads as
+     the one that's "stepped forward." --nav-scale is what the hover
+     wiggle below also multiplies against, so a hover never resets
+     whichever size (default or active) is currently showing. */
+  --nav-scale: 0.82;
+  transform: scale(var(--nav-scale));
+  transition: transform 0.18s ease;
 }
 
 /* Sized larger than the 52x52 box via an absolutely positioned
@@ -140,20 +149,43 @@ button {
   pointer-events: none;
 }
 
-/* Active mode indicator — the symbol itself shrinks slightly rather
-   than gaining any background treatment, so the box's own dimensions
-   (and everything around it) never shift; transform scales from the
-   img's own center, which the flex-centered .nav-symbol box already
-   keeps aligned. Symbols have no hover/focus treatment — they stay
-   visually plain until clicked. */
+/* Active mode indicator — the symbol grows to its full original size
+   rather than gaining any background treatment, so the box's own
+   dimensions (and everything around it) never shift; transform scales
+   from the img's own center, which the flex-centered .nav-symbol box
+   already keeps aligned. */
 .nav-symbol.active img {
-  transform: scale(0.87);
+  --nav-scale: 1;
+}
+
+/* A very small, quick wobble on hover/focus — reuses symbolWiggle
+   (also used by the info button below) at whatever size the symbol is
+   currently showing (default or active), via --nav-scale, so hovering
+   never changes the symbol's size and never blocks the click target
+   underneath it (the wiggle only ever touches the img, never
+   .nav-symbol's own box/hit area). */
+.nav-symbol:hover img,
+.nav-symbol:focus-visible img {
+  animation: symbolWiggle 0.4s ease-in-out 1;
+}
+
+@keyframes symbolWiggle {
+  0%   { transform: scale(var(--nav-scale, 1)) rotate(0deg); }
+  25%  { transform: scale(var(--nav-scale, 1)) rotate(-7deg); }
+  50%  { transform: scale(var(--nav-scale, 1)) rotate(6deg); }
+  75%  { transform: scale(var(--nav-scale, 1)) rotate(-3deg); }
+  100% { transform: scale(var(--nav-scale, 1)) rotate(0deg); }
 }
 
 .brand {
   text-align: center;
   flex: 0 0 auto;
-  pointer-events: none;
+  /* Doubles as the reset-to-default control — opts back into pointer
+     events (the rest of the toolbar stays click-through) without
+     touching the title/subtitle's own look. */
+  pointer-events: auto;
+  cursor: pointer;
+  outline: none;
 }
 
 .brand-name {
@@ -436,16 +468,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   border: none;
-  background: var(--yellow);
+  background: transparent; /* the SVG asset (assets/info-button.svg) is itself a complete circular "i" button — no separate CSS circle behind it */
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
 }
 
 .info-btn-icon {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 34px;
+  height: 34px;
 }
 
 /* Same treatment as the category symbols: a small wiggle, nothing
@@ -543,45 +574,65 @@ button {
    never show a symbol as "active", since nothing about them stays on
    as a lens. */
 
-/* EARTHQUAKE — a quick burst that visibly decays rather than a
-   constant-amplitude wiggle: each swing is smaller than the last, so
-   it reads as settling rather than looping, and the 0% and 100%
-   keyframes are both the identity transform so it always lands back
-   exactly where it started. */
-@keyframes archiveEarthquake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  6% { transform: translate(-9px, 4px) rotate(-0.9deg); }
-  14% { transform: translate(8px, -6px) rotate(1deg); }
-  23% { transform: translate(-7px, 5px) rotate(-0.8deg); }
-  33% { transform: translate(5.5px, -4px) rotate(0.6deg); }
-  44% { transform: translate(-4px, 3px) rotate(-0.4deg); }
-  56% { transform: translate(2.5px, -2px) rotate(0.25deg); }
-  69% { transform: translate(-1.5px, 1.2px) rotate(-0.12deg); }
-  83% { transform: translate(0.6px, -0.5px) rotate(0.05deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
+/* EARTHQUAKE ("wiggle") — each card's own .photo-frame gets a small,
+   independent shimmy, never the .photo-card itself: MAGNET/DRIFT write
+   a card's transform every frame while active, and this can fire
+   without deactivating either of them, so it needs a property of its
+   own to animate rather than fighting theirs. JS sets each frame's
+   --wig-x/--wig-y/--wig-rot/--wig-pop and its own animation-delay/
+   -duration inline for per-card variation; 0% and 100% are both the
+   identity transform so it always lands back exactly where it started. */
+@keyframes cardWiggle {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+  20%  { transform: translate(calc(var(--wig-x) * 0.6), calc(var(--wig-y) * -0.4)) rotate(calc(var(--wig-rot) * 0.5)) scale(calc(1 + var(--wig-pop, 0) * 0.55)); }
+  45%  { transform: translate(calc(var(--wig-x) * -0.85), calc(var(--wig-y) * 0.9)) rotate(calc(var(--wig-rot) * -0.9)) scale(calc(1 + var(--wig-pop, 0))); }
+  70%  { transform: translate(calc(var(--wig-x) * 0.4), calc(var(--wig-y) * -0.3)) rotate(calc(var(--wig-rot) * 0.35)) scale(calc(1 + var(--wig-pop, 0) * 0.3)); }
+  100% { transform: translate(0, 0) rotate(0deg) scale(1); }
 }
 
-.canvas.fx-earthquake {
-  animation: archiveEarthquake 0.95s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+.photo-frame.fx-wiggle {
+  animation-name: cardWiggle;
+  animation-timing-function: cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  /* duration/delay set per-card inline in JS */
 }
 
-/* CURSOR TRAIL — small soft dots spawned behind the pointer, including
-   an interpolated fill along fast movement so the trail reads as
-   continuous rather than gappy. JS sets each dot's size/position/
-   starting opacity inline for variation; this just fades it out and is
-   the only thing that needs to un-set it, since the dot removes itself
-   from the DOM shortly after. */
-.cursor-trail-dot {
+/* CURSOR TRAIL — small copies of the page's own nav symbols, sprinkled
+   around the pointer and falling mostly downward. JS sets each piece's
+   symbol/size/position and its --fall-dx/--fall-dy/--fall-rot inline
+   for variation; a piece is either .symbol-trail-fall (fades away
+   completely) or .symbol-trail-stick (settles at low opacity and stays
+   a while as a faint trace) — both share the same custom properties,
+   just animated toward a different resting state, and both remove
+   themselves from the DOM via their own JS timer once done. */
+.symbol-trail-piece {
   position: fixed;
-  border-radius: 50%;
-  background: #F5BD33;
+  display: block;
   pointer-events: none;
   z-index: 1400; /* above cards and the toolbar, below the isolation view's 1500 */
-  animation: cursorTrailFade 0.7s ease-out forwards;
 }
 
-@keyframes cursorTrailFade {
-  100% { opacity: 0; transform: scale(0.35); }
+@keyframes symbolFallAway {
+  0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 0; }
+  15% { opacity: 0.9; transform: translate(calc(var(--fall-dx) * 0.2), calc(var(--fall-dy) * 0.15)) rotate(calc(var(--fall-rot) * 0.2)) scale(1); }
+  100% { transform: translate(var(--fall-dx), var(--fall-dy)) rotate(var(--fall-rot)) scale(0.9); opacity: 0; }
+}
+
+.symbol-trail-fall {
+  animation-name: symbolFallAway;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes symbolFallStick {
+  0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 0; }
+  40% { opacity: 0.8; transform: translate(calc(var(--fall-dx) * 0.6), calc(var(--fall-dy) * 0.7)) rotate(calc(var(--fall-rot) * 0.7)) scale(1); }
+  100% { transform: translate(var(--fall-dx), var(--fall-dy)) rotate(var(--fall-rot)) scale(0.92); opacity: 0.32; }
+}
+
+.symbol-trail-stick {
+  animation-name: symbolFallStick;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
 }
 
 /* DUPLICATES — a fresh copy pops in rather than just appearing, for a
@@ -619,6 +670,16 @@ body[data-mode="rain"] .photo-card.falling {
 body[data-mode="magnet"] .photo-card,
 body[data-mode="drift"] .photo-card {
   transition: none;
+}
+
+/* MAGNET — a press-and-hold grab cursor, same affordance convention as
+   PLAY WITH THE RULES' own grab/grabbing below. */
+body[data-mode="magnet"] .photo-card {
+  cursor: grab;
+}
+
+body[data-mode="magnet"] .photo-card.magnet-grabbed {
+  cursor: grabbing;
 }
 
 /* PLAY WITH THE RULES — pick-up-and-move cards (js/modes/play-with-the-rules.js) */
