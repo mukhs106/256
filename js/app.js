@@ -82,6 +82,14 @@
     return (window.MODE_CONFIG && window.MODE_CONFIG[key]) || null;
   }
 
+  // Instant, one-shot symbol effects (js/effects/*.js) — checked first,
+  // ahead of the mode system below, since a symbol is only ever wired
+  // to one or the other (see js/modes-config.js).
+  function symbolFxKeyForIndex(i) {
+    const key = "symbol_" + (i + 1);
+    return (window.SYMBOL_FX_CONFIG && window.SYMBOL_FX_CONFIG[key]) || null;
+  }
+
   function setActiveSymbolUI(activeIndex) {
     document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
       const isActive = i === activeIndex;
@@ -95,6 +103,12 @@
   // re-entering it — the reserved symbol (mapped to null) always lands
   // here too, since it has no mode to turn on.
   function handleSymbolActivate(i) {
+    const fxKey = symbolFxKeyForIndex(i);
+    if (fxKey && window.SymbolFX && typeof window.SymbolFX[fxKey] === "function") {
+      window.SymbolFX[fxKey](ArchiveAPI);
+      return; // an instant trigger never touches mode state or the active-symbol indicator
+    }
+
     const modeId = modeIdForSymbolIndex(i);
     const turningOn = modeId && window.ModeManager.getActiveId() !== modeId;
     window.ModeManager.activate(turningOn ? modeId : null);

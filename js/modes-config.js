@@ -1,22 +1,42 @@
 /* ------------------------------------------------------------------
    modes-config.js
    EDIT ME — maps each of the six nav symbols (symbols/1.svg..6.svg,
-   left to right as they appear in index.html) to a mode id registered
-   by one of the files in js/modes/.
+   left to right as they appear in index.html) to a behavior. There are
+   two kinds, each with its own config object below, since they work
+   differently:
 
-   To change which mode a symbol activates, change the value here —
-   nothing else in the app needs to know about it. Set a symbol's value
-   to null to leave it reserved/unused: activating it just clears
-   whatever mode was active and returns to the plain archive.
+   MODE_CONFIG maps a symbol to a mode id registered by one of the
+   files in js/modes/ via ModeManager — a persistent lens that stays
+   "on" (and shows the symbol's active indicator) until the same symbol
+   is clicked again or another mode symbol is chosen. Good for anything
+   that changes how the archive behaves for as long as it's active.
 
-   Mode ids here must match the id each js/modes/*.js file passes to
-   ModeManager.register(id, ...).
+   SYMBOL_FX_CONFIG maps a symbol to a key on window.SymbolFX, an
+   instant one-shot trigger registered by one of the files in
+   js/effects/ — fires once per click and never sets an active
+   indicator or touches mode state, since nothing about it stays "on".
+   Good for a brief effect that plays out and finishes on its own.
+
+   A symbol should only appear with a real value in one of the two
+   objects below (app.js checks SYMBOL_FX_CONFIG first) — set the value
+   to null in whichever one doesn't apply, or in both to leave a symbol
+   reserved/unused, in which case activating it just clears whatever
+   mode was active and returns to the plain archive.
 ------------------------------------------------------------------- */
 window.MODE_CONFIG = {
-  symbol_1: "just-see-what-happens",
-  symbol_2: null, // reserved — not mapped to a mode yet
-  symbol_3: "no-point",
+  symbol_1: null, // instant effect instead — see SYMBOL_FX_CONFIG
+  symbol_2: null, // instant effect instead — see SYMBOL_FX_CONFIG
+  symbol_3: "rain",
   symbol_4: "play-with-the-rules",
   symbol_5: "lose-track-of-time",
   symbol_6: "what-else-could-it-be",
+};
+
+window.SYMBOL_FX_CONFIG = {
+  symbol_1: "earthquake",
+  symbol_2: "cursorTrail",
+  symbol_3: null,
+  symbol_4: null,
+  symbol_5: null,
+  symbol_6: null,
 };

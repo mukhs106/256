@@ -465,10 +465,62 @@ button {
   background-color: var(--yellow-hover);
 }
 
+/* ---------------- symbol effects (instant triggers) ----------------
+   EARTHQUAKE and CURSOR TRAIL (js/effects/earthquake.js,
+   js/effects/cursor-trail.js) fire once per click and finish on their
+   own — unlike the modes below, they never set body[data-mode] and
+   never show a symbol as "active", since nothing about them stays on
+   as a lens. */
+
+/* EARTHQUAKE — briefly shakes the whole canvas as one block, so every
+   image keeps its exact position relative to the others; both the 0%
+   and 100% keyframes are the identity transform, so it always settles
+   back to exactly where it started. */
+@keyframes archiveEarthquake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-7px, 3px) rotate(-0.6deg); }
+  20% { transform: translate(6px, -4px) rotate(0.7deg); }
+  30% { transform: translate(-8px, 2px) rotate(-0.5deg); }
+  40% { transform: translate(7px, -3px) rotate(0.6deg); }
+  50% { transform: translate(-5px, 4px) rotate(-0.4deg); }
+  60% { transform: translate(6px, -5px) rotate(0.5deg); }
+  70% { transform: translate(-6px, 3px) rotate(-0.3deg); }
+  80% { transform: translate(4px, -2px) rotate(0.3deg); }
+  90% { transform: translate(-3px, 2px) rotate(-0.2deg); }
+}
+
+.canvas.fx-earthquake {
+  animation: archiveEarthquake 1s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* CURSOR TRAIL — small soft dots spawned behind the pointer. JS sets
+   each dot's size/position/starting opacity inline for variation; this
+   just fades it out and is the only thing that needs to un-set it, since
+   the dot removes itself from the DOM shortly after. */
+.cursor-trail-dot {
+  position: fixed;
+  border-radius: 50%;
+  background: #F5BD33;
+  pointer-events: none;
+  z-index: 1400; /* above cards and the toolbar, below the isolation view's 1500 */
+  animation: cursorTrailFade 0.7s ease-out forwards;
+}
+
+@keyframes cursorTrailFade {
+  100% { opacity: 0; transform: scale(0.35); }
+}
+
 /* ---------------- mode hooks ----------------
    Scoped by the data-mode attribute ModeManager sets on <body>, so
    these only apply while their mode is active and never touch the
    plain archive. */
+
+/* RAIN — a clicked photo falls instead of opening (js/modes/rain.js);
+   pointer-events:none while falling so it can't be re-clicked or block
+   whatever ends up underneath it mid-fall. */
+body[data-mode="rain"] .photo-card.falling {
+  pointer-events: none;
+}
 
 /* PLAY WITH THE RULES — pick-up-and-move cards (js/modes/play-with-the-rules.js) */
 body[data-mode="play-with-the-rules"] .photo-card {
