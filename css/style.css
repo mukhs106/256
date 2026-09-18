@@ -554,8 +554,6 @@ button {
   align-items: stretch;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden; /* keeps each button's hover fill within the rounded pill */
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
 }
 
@@ -566,6 +564,7 @@ button {
   align-items: center;
   justify-content: center;
   border: none;
+  border-radius: 0; /* overrides the global button{} default — normal sharp square edges */
   background: transparent;
   color: var(--ink);
   font-family: var(--font-body);
@@ -649,18 +648,22 @@ button {
   animation-fill-mode: forwards;
 }
 
-/* DUPLICATES — a fresh copy pops in rather than just appearing, for a
-   more tactile "spawned just now" read; animation-fill-mode:forwards
-   keeps it at its resting scale/rotation once the pop settles, so no
+/* DUPLICATES — a fresh copy leaps away from its source rather than
+   just popping in at its final spot: it starts at the source's own
+   position (the reverse of the duplicate's offset, via --dup-dx/
+   --dup-dy set in js/modes/duplicates.js), overshoots slightly past
+   its landing spot for a playful "jump" read, then settles there.
+   animation-fill-mode:forwards (the trailing "both") keeps it at its
+   resting position/scale/rotation once the jump settles, so no
    separate inline transform is needed afterward. */
 @keyframes duplicatePop {
-  0% { transform: scale(0.4) rotate(var(--duplicate-rot, 0deg)); opacity: 0; }
-  65% { transform: scale(1.06) rotate(var(--duplicate-rot, 0deg)); opacity: 1; }
-  100% { transform: scale(1) rotate(var(--duplicate-rot, 0deg)); opacity: 1; }
+  0% { transform: translate(var(--dup-dx, 0px), var(--dup-dy, 0px)) scale(0.5) rotate(var(--duplicate-rot, 0deg)); opacity: 0; }
+  60% { transform: translate(calc(var(--dup-dx, 0px) * -0.12), calc(var(--dup-dy, 0px) * -0.12)) scale(1.1) rotate(var(--duplicate-rot, 0deg)); opacity: 1; }
+  100% { transform: translate(0, 0) scale(1) rotate(var(--duplicate-rot, 0deg)); opacity: 1; }
 }
 
 .duplicate-card {
-  animation: duplicatePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: duplicatePop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* ---------------- mode hooks ----------------

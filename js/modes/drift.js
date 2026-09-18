@@ -26,10 +26,11 @@
    card meaningfully away from its (still-drifting) spot.
 
    Pointer tracking mirrors MAGNET's approach for consistency: the last
-   raw client coordinates are cached from pointermove, and the
-   canvas-local point is recomputed fresh every animation frame from a
-   live getBoundingClientRect() rather than cached, so a scroll/pan with
-   no further mouse movement can't leave a stale point.
+   raw client coordinates are cached from pointermove, and converted to
+   canvas-local coordinates fresh every animation frame via
+   archive.screenToLocal() (zoom-aware — see its doc comment in app.js)
+   rather than cached, so neither a scroll/pan nor a zoom change with no
+   further mouse movement can leave a stale or mis-scaled point.
 
    Performance: the card list is only re-queried periodically via
    ctx.interval (also where per-card drift/spring state is pruned once
@@ -39,19 +40,25 @@
    motion is the only thing smoothing the transform.
 ------------------------------------------------------------------- */
 (function () {
-  const RADIUS = 240; // px — how far from the pointer a card starts feeling the ripple
-  const MAX_PUSH = 46; // px — the strongest push, right at the pointer (soft-falloff curve below, not linear)
-  const MAX_OFFSET = 60; // px — hard clamp so the spring's own overshoot can never carry the ripple far from its drift baseline
+  const RADIUS = 260; // px — how far from the pointer a card starts feeling the ripple (was 240)
+  const MAX_PUSH = 95; // px — the strongest push, right at the pointer (was 46) — a hand disturbing water should shove it clear, not nudge it
+  const MAX_OFFSET = 120; // px — hard clamp so the spring's own overshoot can never carry the ripple far from its drift baseline (raised alongside MAX_PUSH so the stronger push isn't immediately clipped)
   const STIFFNESS = 140; // spring constant — how hard the offset is pulled toward its target
   const DAMPING = 16; // spring damping — under STIFFNESS's critical damping (~23.7) on purpose, for a light overshoot/settle rather than a dead stop
   const ROT_FROM_VEL = 0.012; // deg per px/s of horizontal velocity — a faint tilt that tracks the ripple's motion, reinforcing the "surface" feel
-  const MAX_ROT = 3; // deg — clamp on the ripple's own contribution to rotation
-  const MAX_TOTAL_ROT = 5; // deg — clamp on drift + ripple rotation combined
+  const MAX_ROT = 4; // deg — clamp on the ripple's own contribution to rotation (was 3, nudged up alongside the stronger push)
+  const MAX_TOTAL_ROT = 6; // deg — clamp on drift + ripple rotation combined (was 5)
   const CARD_RESCAN_MS = 500; // how often the live card list is refreshed (pan/zoom loads and drops chunks)
 
   const AMP_XY = [4, 11]; // px, per-axis drift amplitude range
   const AMP_ROT = [0.6, 2.2]; // deg, drift rotation amplitude range
-  const PERIOD_MS = [3500, 7500]; // ms, per-axis/rotation period range — kept independent per card so nothing lines up
+  // Used below as `sin(t / PERIOD_MS + phase)`, so a full cycle actually
+  // takes 2*PI times longer than this value (e.g. 500 -> ~3.1s, not
+  // 500ms) — the original [3500, 7500] range was accordingly a very
+  // slow ~22-47s per cycle. This range instead targets a genuinely
+  // noticeable ~2.2-5s per cycle, kept independent per axis/card so
+  // nothing lines up.
+  const PERIOD_MS = [350, 800];
 
   function rand([lo, hi]) { return lo + Math.random() * (hi - lo); }
 
@@ -68,7 +75,6 @@
     label: "DRIFT",
 
     enter(ctx) {
-      const canvasEl = ctx.archive.getCanvasEl();
       const canvasWrap = ctx.archive.getCanvasWrapEl();
 
       let cards = ctx.archive.getCards();
@@ -112,11 +118,7 @@
         lastT = t;
 
         const client = ctx.scratch.client;
-        let pointer = null;
-        if (client) {
-          const rect = canvasEl.getBoundingClientRect();
-          pointer = { x: client.x - rect.left, y: client.y - rect.top };
-        }
+        const pointer = client ? ctx.archive.screenToLocal(client.x, client.y) : null;
 
         cards.forEach((card) => {
           // The continuous drift term — always live, a closed-form function

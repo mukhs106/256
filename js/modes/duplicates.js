@@ -12,10 +12,15 @@
        so it runs before the card's own bubble-phase "click ->
        openIsolation" listener and can stop it there.
      - A duplicate is a cloneNode(true) of whichever card was clicked
-       (the original or an existing duplicate), repositioned with a
-       small random offset from its source's own inline left/top — the
-       same positioning system placeImage() in app.js already writes,
-       so no separate layout math is needed.
+       (the original or an existing duplicate), repositioned at a
+       guaranteed minimum radial distance (a random angle + a random
+       distance within [MIN_DIST, MAX_DIST], never an independent
+       per-axis offset that can cancel out near zero) from its source's
+       own inline left/top — the same positioning system placeImage()
+       in app.js already writes, so no separate layout math is needed.
+       The reverse of that same vector drives the CSS "jump" animation
+       below (see --dup-dx/--dup-dy), so the pop always travels FROM the
+       source's position TO wherever the duplicate actually lands.
      - Every duplicate is tagged data-duplicate-origin with the id of
        the ORIGINAL archive image it traces back to (never a duplicate's
        own transient identity, and its own data-id is stripped so nei-
@@ -37,10 +42,12 @@
 ------------------------------------------------------------------- */
 (function () {
   const MAX_PER_ORIGIN = 20;
-  const OFFSET_MIN = 22; // px, how far the earliest duplicates land from their source
-  const OFFSET_MAX = 52; // px, how far duplicates land once a cluster has grown — spreads out more as it builds up
+  const DIST_MIN = 34; // px, guaranteed minimum jump distance — never lands almost on top of its source
+  const DIST_MAX_EARLY = 64; // px, upper end of the jump distance for the earliest duplicates
+  const DIST_MAX_LATE = 90; // px, upper end once a cluster has grown — spreads out further, but still controlled
   const ROTATION_MAX = 10; // deg, grows alongside the offset for the same "increasingly playful" reason
-  const GROWTH_PER_DUP = 0.08; // each duplicate renders ~8% larger than the original, per duplicate already spawned
+  const BASE_GROWTH = 1.15; // even the very first duplicate renders ~15% larger than the original
+  const GROWTH_PER_DUP = 0.08; // each further duplicate adds another ~8% on top of BASE_GROWTH
   const MAX_GROWTH = 2.2; // hard cap on that growth — visibly larger over a long cluster, never "giant"
 
   // A duplicate always points back to the original photo it traces to,
@@ -73,10 +80,19 @@
 
         // A cluster spreads and tilts a little further with every added
         // copy, so repeated clicking visibly builds toward something
-        // messier rather than always landing the same modest offset.
+        // messier rather than always landing the same modest jump.
         const grown = count / MAX_PER_ORIGIN;
-        const offsetRange = OFFSET_MIN + (OFFSET_MAX - OFFSET_MIN) * grown;
+        const distMax = DIST_MAX_EARLY + (DIST_MAX_LATE - DIST_MAX_EARLY) * grown;
         const rotation = (Math.random() * 2 - 1) * ROTATION_MAX * (0.3 + 0.7 * grown);
+
+        // Polar, not independent per-axis, offsets — a guaranteed minimum
+        // radial distance in a random direction, so a duplicate always
+        // visibly jumps clear of its source instead of sometimes landing
+        // with both axes near zero (almost on top of it).
+        const angle = Math.random() * Math.PI * 2;
+        const dist = DIST_MIN + Math.random() * (distMax - DIST_MIN);
+        const offsetX = Math.cos(angle) * dist;
+        const offsetY = Math.sin(angle) * dist;
 
         // Sized off the true original's own base width/height, not the
         // clicked source's (which may itself already be an enlarged
@@ -85,16 +101,22 @@
         const baseFrame = original && original.querySelector(".photo-frame");
         const baseWidth = original ? (parseFloat(original.style.width) || 0) : 0;
         const baseHeight = baseFrame ? (parseFloat(baseFrame.style.height) || 0) : 0;
-        const scale = Math.min(MAX_GROWTH, 1 + count * GROWTH_PER_DUP);
+        const scale = Math.min(MAX_GROWTH, BASE_GROWTH + count * GROWTH_PER_DUP);
 
         const clone = source.cloneNode(true);
         clone.classList.add("duplicate-card");
         delete clone.dataset.id;
         clone.dataset.duplicateOrigin = originId;
-        clone.style.left = (left + (Math.random() * 2 - 1) * offsetRange) + "px";
-        clone.style.top = (top + (Math.random() * 2 - 1) * offsetRange) + "px";
+        clone.style.left = (left + offsetX) + "px";
+        clone.style.top = (top + offsetY) + "px";
         clone.style.zIndex = String(zCounter++);
         clone.style.setProperty("--duplicate-rot", rotation.toFixed(1) + "deg");
+        // The jump animation (see duplicatePop in style.css) starts the
+        // duplicate back at its source's position and travels the reverse
+        // of this same offset, so it always reads as leaping FROM the
+        // original TO its landing spot rather than just popping in place.
+        clone.style.setProperty("--dup-dx", (-offsetX).toFixed(1) + "px");
+        clone.style.setProperty("--dup-dy", (-offsetY).toFixed(1) + "px");
         if (baseWidth && baseHeight) {
           clone.style.width = (baseWidth * scale).toFixed(1) + "px";
           const cloneFrame = clone.querySelector(".photo-frame");

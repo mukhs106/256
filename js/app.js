@@ -655,6 +655,15 @@
     getCanvasWrapEl() { return canvasWrapEl; },
     getCards() { return canvasEl ? Array.from(canvasEl.querySelectorAll(".photo-card")) : []; },
     cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
+    // Converts raw viewport coordinates (e.g. straight from a
+    // pointermove's clientX/clientY) into the same world/local
+    // coordinate space card left/top are placed in — i.e. properly
+    // zoom-adjusted, unlike subtracting a getBoundingClientRect() alone
+    // (which only lines up when zoom is exactly 1). MAGNET/DRIFT use
+    // this for their own pointer-vs-card distance math.
+    screenToLocal(clientX, clientY) {
+      return screenToWorld(clientX - wrapLeft, clientY - wrapTop);
+    },
     // The currently visible viewport, in the same world coordinates
     // card left/top are placed in (see generateChunk) — lets a mode
     // reason about "what's on screen right now" now that the field pans

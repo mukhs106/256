@@ -27,12 +27,12 @@
    isolation/scrolling changes.
 
    The pointer's canvas-local position is recomputed every animation
-   frame from the last raw client coordinates + a fresh
-   getBoundingClientRect(), rather than being cached from the
-   pointermove event itself — canvasEl pans/zooms, so a wheel-scroll or
-   zoom with no further mouse movement would otherwise leave a stale
-   canvas-local point that no longer lines up with whatever the cursor
-   now sits over.
+   frame from the last raw client coordinates via
+   archive.screenToLocal() (zoom-aware — see its doc comment in app.js),
+   rather than being cached from the pointermove event itself — canvasEl
+   pans/zooms, so a wheel-scroll or zoom with no further mouse movement
+   would otherwise leave a stale or mis-scaled canvas-local point that
+   no longer lines up with whatever the cursor now sits over.
 
    Performance: the card list is only re-queried periodically via
    ctx.interval (also where stale offset state is pruned), not every
@@ -41,8 +41,8 @@
    own per-frame easing is the only thing smoothing the motion.
 ------------------------------------------------------------------- */
 (function () {
-  const RADIUS = 230; // px — how far from the pointer the hovered card starts feeling the ambient pull
-  const MAX_PULL = 32; // px — the ambient pull's strongest offset, right at the pointer
+  const RADIUS = 260; // px — how far from the pointer the hovered card starts feeling the ambient pull (was 230)
+  const MAX_PULL = 48; // px — the ambient pull's strongest offset, right at the pointer (was 32) — clearer attraction now that the pointer math below is actually zoom-correct
   const EASE = 0.16; // fraction of the remaining gap an ambient offset closes per frame
   const DRAG_THRESHOLD = 4; // px of pointer movement before a press counts as a grab, not a click
   const GRAB_EASE = 0.24; // catch-up fraction at the moment a card is grabbed
@@ -141,11 +141,15 @@
 
       ctx.loop((t) => {
         const client = ctx.scratch.client;
-        let pointer = null;
-        if (client) {
-          const rect = canvasEl.getBoundingClientRect();
-          pointer = { x: client.x - rect.left, y: client.y - rect.top };
-        }
+        // screenToLocal is zoom-aware (unlike subtracting a plain
+        // getBoundingClientRect(), which only lines up at zoom 1) — see
+        // its doc comment in app.js. Without this, the pull/drag target
+        // was computed in the wrong coordinate space whenever the field
+        // wasn't at exactly zoom 1 (the app's own default zoom is
+        // already below 1), which is what made the pull read as weak
+        // and a held card visibly lag behind the pointer instead of
+        // tracking it.
+        const pointer = client ? ctx.archive.screenToLocal(client.x, client.y) : null;
 
         const activeCard = (grab && grab.dragging) ? grab.card : ctx.scratch.hoverCard;
 
