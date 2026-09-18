@@ -643,7 +643,7 @@
     // reset); ModeManager also calls it on every mode switch, via
     // resetView() below.
     rerender() {
-      renderCanvas();
+      resetField();
     },
     // The reset hook ModeManager calls on every mode switch, before the
     // next mode (if any) enters.
@@ -672,7 +672,7 @@
     canvasWrapEl = document.getElementById("canvas-wrap");
     toolbarEl = document.querySelector(".toolbar");
 
-    renderCanvas();
+    resetField();
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
@@ -712,7 +712,7 @@
       if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
     });
 
-    window.addEventListener("resize", debounce(() => { renderCanvas(); }, 200));
+    window.addEventListener("resize", debounce(() => { resetField(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);

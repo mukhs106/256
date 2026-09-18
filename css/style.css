@@ -501,6 +501,41 @@ button {
   background-color: var(--yellow-hover);
 }
 
+/* ---------------- zoom controls ----------------
+   Fixed bottom-right — the info button's mirror image at bottom-left,
+   both riding above the canvas at the same z-index. */
+
+.zoom-controls {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 160;
+  display: flex;
+  align-items: stretch;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.zoom-btn:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.zoom-btn:hover {
+  box-shadow: inset 0 0 12px 1px var(--yellow-hover);
+}
+
 /* ---------------- symbol effects (instant triggers) ----------------
    EARTHQUAKE and CURSOR TRAIL (js/effects/earthquake.js,
    js/effects/cursor-trail.js) fire once per click and finish on their
