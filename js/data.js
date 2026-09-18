@@ -1351,7 +1351,7 @@
     // the canvas stays airy rather than dominated by a few big cards.
     const sizeRoll = rng();
     const sizeBucket = sizeRoll < 0.36 ? "small" : sizeRoll < 0.76 ? "medium" : "large";
-    const baseLong = sizeBucket === "small" ? randInt(85, 115) : sizeBucket === "medium" ? randInt(120, 155) : randInt(160, 200);
+    const baseLong = sizeBucket === "small" ? randInt(85, 115) : sizeBucket === "medium" ? randInt(120, 155) : randInt(160, 180);
 
     const parsedDate = meta.date ? new Date(meta.date) : null;
     const hasDate = parsedDate && !isNaN(parsedDate);

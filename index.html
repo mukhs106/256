@@ -16,16 +16,16 @@
   <main class="main">
     <header class="toolbar">
       <nav class="icon-nav" aria-label="category symbols">
-        <span class="nav-symbol" tabindex="0"><img src="symbols/1.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
-        <span class="nav-symbol" tabindex="0"><img src="symbols/2.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
-        <span class="nav-symbol" tabindex="0"><img src="symbols/3.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
-        <div class="brand" id="brand-home" role="button" tabindex="0" aria-label="Return to the start of the archive">
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/1.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/2.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/3.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <div class="brand">
           <div class="brand-name">time well wasted!</div>
-          <div class="brand-sub">a small archive of things kept without a clear reason.</div>
+          <div class="brand-sub">an archive of play</div>
         </div>
-        <span class="nav-symbol" tabindex="0"><img src="symbols/4.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
-        <span class="nav-symbol" tabindex="0"><img src="symbols/5.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
-        <span class="nav-symbol" tabindex="0"><img src="symbols/6.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/4.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/5.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
+        <span class="nav-symbol" tabindex="0" role="button" aria-pressed="false"><img src="symbols/6.svg" alt="" width="52" height="52" /><span class="nav-symbol-label"></span></span>
       </nav>
     </header>
 
@@ -48,7 +48,9 @@
     </div>
   </div>
 
-  <button class="info-btn" id="info-btn" aria-haspopup="true" aria-expanded="false" aria-label="A note, of sorts">i</button>
+  <button class="info-btn" id="info-btn" aria-haspopup="true" aria-expanded="false" aria-label="A note, of sorts">
+    <img class="info-btn-icon" src="assets/info-button.svg" alt="" width="18" height="18" />
+  </button>
 
   <div class="zoom-controls" id="zoom-controls">
     <button class="zoom-btn" id="zoom-out" aria-label="Zoom out">−</button>
@@ -79,6 +81,13 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/modes-config.js"></script>
+<script src="js/mode-manager.js"></script>
+<script src="js/modes/just-see-what-happens.js"></script>
+<script src="js/modes/no-point.js"></script>
+<script src="js/modes/play-with-the-rules.js"></script>
+<script src="js/modes/lose-track-of-time.js"></script>
+<script src="js/modes/what-else-could-it-be.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

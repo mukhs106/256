@@ -86,6 +86,49 @@
     resetField();
   }
 
+  // ---------- mode switching (symbol nav -> ModeManager) ----------
+  // Which symbol maps to which mode lives entirely in MODE_CONFIG
+  // (js/modes-config.js) as symbol_1..symbol_6, in the same left-to-
+  // right order as the .nav-symbol elements in index.html. This code
+  // never hard-codes a mode id — it just looks up "symbol_" + (index+1)
+  // and hands whatever it finds to ModeManager.
+
+  function modeIdForSymbolIndex(i) {
+    const key = "symbol_" + (i + 1);
+    return (window.MODE_CONFIG && window.MODE_CONFIG[key]) || null;
+  }
+
+  function setActiveSymbolUI(activeIndex) {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      const isActive = i === activeIndex;
+      sym.classList.toggle("active", isActive);
+      sym.setAttribute("aria-pressed", String(isActive));
+    });
+  }
+
+  // Clicking the symbol for the mode that's already active turns it
+  // back off (plain archive, no symbol marked active) rather than
+  // re-entering it — the reserved symbol (mapped to null) always lands
+  // here too, since it has no mode to turn on.
+  function handleSymbolActivate(i) {
+    const modeId = modeIdForSymbolIndex(i);
+    const turningOn = modeId && window.ModeManager.getActiveId() !== modeId;
+    window.ModeManager.activate(turningOn ? modeId : null);
+    setActiveSymbolUI(turningOn ? i : -1);
+  }
+
+  function wireModeSwitching() {
+    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
+      sym.addEventListener("click", () => handleSymbolActivate(i));
+      sym.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleSymbolActivate(i);
+        }
+      });
+    });
+  }
+
   // ---------- card element ----------
 
   function makeCard(img) {
@@ -100,13 +143,15 @@
     photo.alt = "";
     photo.loading = "lazy";
     photo.decoding = "async";
-    photo.draggable = false; // the field has its own drag-to-pan; don't let the browser drag the image itself
+    photo.draggable = false; // the field has its own drag-to-pan, and PLAY WITH THE RULES has its own dragging — don't let the browser's native image-drag ghost fight either
     frame.appendChild(photo);
     el.appendChild(frame);
 
+    // Primary photos get one dot before the name, secondary get two.
+    const dots = img.type === "primary" ? "●" : "●●";
     const caption = document.createElement("div");
     caption.className = "photo-caption";
-    caption.innerHTML = `<span class="photo-name">${img.code}</span>`;
+    caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
     el.appendChild(caption);
 
     el.addEventListener("mouseenter", () => showMeta(img));
@@ -147,6 +192,7 @@
   let zoom = 1;
   const chunks = new Map(); // "cx,cy" -> chunk element
   let chunkCheckQueued = false;
+  let autoExtendEnabled = true; // modes can pause automatic chunk generation via ArchiveAPI.setAutoExtend
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
@@ -219,9 +265,14 @@
   function generateChunk(cx, cy) {
     const el = document.createElement("div");
     el.className = "canvas-chunk";
-    el.style.position = "absolute";
-    el.style.left = (cx * CHUNK) + "px";
-    el.style.top = (cy * CHUNK) + "px";
+
+    // A plain (non-positioned) grouping node — its cards are placed with
+    // world-absolute left/top (the chunk's own origin baked in below), the
+    // same coordinate space .photo-card left/top has always used, so
+    // per-card position reads elsewhere (e.g. modes/play-with-the-rules.js's
+    // cardBox, modes/lose-track-of-time.js's cardCenter) don't need to know
+    // chunks exist at all.
+    const originX = cx * CHUNK, originY = cy * CHUNK;
 
     const imgs = filteredImages();
     if (imgs.length) {
@@ -232,7 +283,12 @@
         for (const img of shuffledCopy(imgs)) {
           if (Math.min(...colHeights) >= CHUNK) break;
           const { el: cardEl, col } = placeImage(el, img, CHUNK, cols, actualColWidth, colHeights);
-          if (colHeights[col] > CHUNK) cardEl.remove();
+          if (colHeights[col] > CHUNK) {
+            cardEl.remove();
+          } else {
+            cardEl.style.left = (parseFloat(cardEl.style.left) + originX) + "px";
+            cardEl.style.top = (parseFloat(cardEl.style.top) + originY) + "px";
+          }
           guard++;
         }
       }
@@ -255,6 +311,7 @@
   // itself is the cap, so DOM size stays bounded by viewport/zoom
   // rather than by how far or how long the user has wandered.
   function ensureChunksLoaded() {
+    if (!autoExtendEnabled) return; // a mode can pause automatic chunk generation via ArchiveAPI.setAutoExtend
     const w = canvasWrapEl.clientWidth, h = canvasWrapEl.clientHeight;
     const topLeft = screenToWorld(0, 0);
     const bottomRight = screenToWorld(w, h);
@@ -313,6 +370,12 @@
   // genuine (non-dragging) click.
   function onPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
+    // A press starting on a card is that card's own gesture (a plain
+    // click to isolate it, or — in PLAY WITH THE RULES — its own
+    // pick-up-and-move drag, see modes/play-with-the-rules.js); camera
+    // panning only starts from open space so the two never compete for
+    // the same drag.
+    if (e.target.closest(".photo-card")) return;
     drag = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y, moved: false };
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
@@ -428,7 +491,27 @@
 
   // ---------- isolation view ----------
 
+  // A mode can swap out which images get suggested when the viewer
+  // opens a photo, without touching how they're shown — see
+  // ArchiveAPI.setAssociationStrategy below. null means "use the
+  // archive's own loose-association trail" (defaultAssociations).
+  // Reset to null on every mode switch by resetView(), so a mode never
+  // has to clean this up itself.
+  let associationStrategy = null;
+
   function computeAssociations(img) {
+    if (associationStrategy) {
+      try {
+        const result = associationStrategy(img, images, state.trail);
+        if (Array.isArray(result) && result.length) return result;
+      } catch (e) {
+        console.error("[association strategy]", e);
+      }
+    }
+    return defaultAssociations(img);
+  }
+
+  function defaultAssociations(img) {
     const pool = images.filter((i) => i.id !== img.id);
     const notInTrail = pool.filter((i) => !state.trail.includes(i.id));
     const source = notInTrail.length ? notInTrail : pool;
@@ -517,7 +600,9 @@
       const btn = document.createElement("button");
       btn.className = "path-btn";
       btn.style.transform = `translateX(${shift}px)`;
-      btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span><span class="path-label">${p.label}</span>`;
+      btn.title = p.label;
+      btn.setAttribute("aria-label", p.label);
+      btn.innerHTML = `<span class="path-thumb" style="background-image:url('${imgUrl(p.image)}')"></span>`;
       btn.addEventListener("click", () => {
         state.trail.push(p.image.id);
         state.isolatedId = p.image.id;
@@ -541,9 +626,8 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // Metadata for the isolated photo shows in the same fixed
-    // bottom-right panel used for a hovered card in the field.
-    applyMetaPanel(img);
+    // The isolation view has no metadata dock beside it.
+    setMetaPanel(null);
 
     renderTrail();
     renderPaths(img);
@@ -553,24 +637,16 @@
     state.trail = [img.id];
     state.isolatedId = img.id;
     document.getElementById("isolation").hidden = false;
+    document.body.classList.add("isolating");
     renderIsolation(img);
   }
 
   function closeIsolation() {
     document.getElementById("isolation").hidden = true;
+    document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
     hideMetaPanel();
-  }
-
-  // ---------- return to the original homepage state ----------
-  // Triggered by clicking the title/subtitle. Safe to call from any
-  // state: closeIsolation() is a no-op if isolation is already closed,
-  // and resetField() rebuilds the field fresh and re-centers the view.
-  function resetHome() {
-    closeIsolation();
-    state.collectionId = "all";
-    resetField();
   }
 
   // ---------- info panel ----------
@@ -584,6 +660,66 @@
     document.getElementById("info-panel").hidden = true;
     document.getElementById("info-btn").setAttribute("aria-expanded", "false");
   }
+
+  // ---------- mode system bridge ----------
+  // The curated surface every mode gets as ctx.archive. Modes read the
+  // archive and hook into it only through this object — never by
+  // reaching into app.js internals directly — so what a mode can touch
+  // stays deliberate and stable. getImages() returns the permanent,
+  // shared photo data (positions/metadata/collections all live on it);
+  // treat it as read-only, since every mode draws from the same list.
+  const ArchiveAPI = {
+    getImages() { return images; },
+    getCanvasEl() { return canvasEl; },
+    getCanvasWrapEl() { return canvasWrapEl; },
+    getCards() { return canvasEl ? Array.from(canvasEl.querySelectorAll(".photo-card")) : []; },
+    cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
+    // The currently visible viewport, in the same world coordinates
+    // card left/top are placed in (see generateChunk) — lets a mode
+    // reason about "what's on screen right now" now that the field pans
+    // freely instead of just scrolling down (see modes/lose-track-of-time.js).
+    getViewportBounds() {
+      const topLeft = screenToWorld(0, 0);
+      const bottomRight = screenToWorld(canvasWrapEl.clientWidth, canvasWrapEl.clientHeight);
+      return { left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y };
+    },
+    openIsolation,
+    closeIsolation,
+    showMeta,
+    hideMeta,
+    setAutoExtend(on) { autoExtendEnabled = !!on; },
+    // Lets a mode change which images get suggested when the viewer
+    // opens a photo (the isolation view's flanking "paths" + trail —
+    // see computeAssociations above), without touching how that view
+    // itself works. `fn(img, images, trail)` should return an array of
+    // { label, image } pairs, same shape as the default algorithm; an
+    // empty/invalid result quietly falls back to the default. Pass
+    // null/omit to go back to the default. Reset to null automatically
+    // on every mode switch (see resetView below), so a mode never has
+    // to restore it on its way out.
+    setAssociationStrategy(fn) {
+      associationStrategy = typeof fn === "function" ? fn : null;
+    },
+    // Rebuilds the canvas straight from the permanent image data,
+    // discarding whatever's currently been done to the DOM (dragged
+    // positions, temporary elements, added classes...) without ever
+    // touching that underlying data itself. A mode can call this itself
+    // to offer an in-place "restore the arrangement" moment without
+    // leaving the mode (see e.g. play-with-the-rules.js's double-click
+    // reset); ModeManager also calls it on every mode switch, via
+    // resetView() below.
+    rerender() {
+      resetField();
+      hideMeta();
+    },
+    // The reset hook ModeManager calls on every mode switch, before the
+    // next mode (if any) enters.
+    resetView() {
+      autoExtendEnabled = true;
+      associationStrategy = null;
+      this.rerender();
+    },
+  };
 
   // ---------- init ----------
 
@@ -607,6 +743,9 @@
     renderSymbolLabels();
     hideMetaPanel();
 
+    window.ModeManager.configure(ArchiveAPI);
+    wireModeSwitching();
+
     canvasWrapEl.addEventListener("pointerdown", onPointerDown);
     canvasWrapEl.addEventListener("wheel", onWheel, { passive: false });
     // Consumes suppressNextClick on the very next click anywhere in the
@@ -619,12 +758,6 @@
 
     document.getElementById("zoom-in").addEventListener("click", () => zoomFromButton(ZOOM_STEP));
     document.getElementById("zoom-out").addEventListener("click", () => zoomFromButton(1 / ZOOM_STEP));
-
-    const brandHome = document.getElementById("brand-home");
-    brandHome.addEventListener("click", resetHome);
-    brandHome.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); resetHome(); }
-    });
 
     document.getElementById("isolation-close").addEventListener("click", closeIsolation);
     document.getElementById("isolation").addEventListener("click", (e) => {
@@ -641,7 +774,7 @@
     document.addEventListener("click", (e) => {
       const panel = document.getElementById("info-panel");
       if (panel.hidden) return;
-      if (panel.contains(e.target) || e.target.id === "info-btn") return;
+      if (panel.contains(e.target) || e.target.closest("#info-btn")) return;
       closeInfoPanel();
     });
     document.addEventListener("keydown", (e) => {
