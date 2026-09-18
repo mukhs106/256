@@ -42,7 +42,7 @@ html, body {
   font-family: var(--font-body);
   font-weight: var(--weight-regular);
   font-size: 14px;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -123,9 +123,11 @@ button {
   z-index: 1;
 }
 
-/* Hover halo — sized larger than the 52x52 box via an absolutely
-   positioned pseudo-element, so the glow can breathe without ever
-   changing the box's own dimensions (no layout shift). */
+/* Sized larger than the 52x52 box via an absolutely positioned
+   pseudo-element, so it can breathe without changing the box's own
+   dimensions (no layout shift). No longer shown on hover (hover is
+   just the wiggle below) — kept only as the active-mode indicator, so
+   the currently-engaged symbol/mode stays legible without a hover. */
 .nav-symbol::before {
   content: "";
   position: absolute;
@@ -138,18 +140,8 @@ button {
   pointer-events: none;
 }
 
-/* Active mode indicator — same halo as hover, just left showing at
-   lower strength so the current symbol/mode stays legible without a
-   hover. Declared before the hover rule so hovering the active symbol
-   still reads as a full, normal hover on top of it. */
 .nav-symbol.active::before {
   opacity: 0.55;
-  transform: scale(1);
-}
-
-.nav-symbol:hover::before,
-.nav-symbol:focus-visible::before {
-  opacity: 1;
   transform: scale(1);
 }
 
@@ -167,29 +159,39 @@ button {
 }
 
 /* The category name — a mysterious invitation, not a persistent label.
-   Absolutely positioned so revealing it never shifts the symbol row or
-   anything below it. */
+   Sits beside the symbol (not underneath) so it reads more like a
+   whispered aside than a caption. Defaults to the right; the corner
+   symbol (last one) flips to the left so it opens toward the header's
+   center instead of off the edge. A fixed width (rather than nowrap)
+   lets longer names wrap into a couple of short lines naturally. */
 .nav-symbol-label {
-  --label-shift: 0px; /* nudged by JS so long labels near an edge don't get clipped by .main's overflow:hidden */
   position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translate(calc(-50% + var(--label-shift)), -3px);
-  white-space: nowrap;
-  font-size: 8.5px;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  top: 50%;
+  left: calc(100% + 10px);
+  width: 90px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
   color: var(--ink-soft);
   opacity: 0;
+  transform: translateY(-50%) translateX(-4px);
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
+}
+
+.nav-symbol:last-of-type .nav-symbol-label {
+  left: auto;
+  right: calc(100% + 10px);
+  text-align: right;
+  transform: translateY(-50%) translateX(4px);
 }
 
 .nav-symbol:hover .nav-symbol-label,
 .nav-symbol:focus-visible .nav-symbol-label {
   opacity: 1;
-  transform: translate(calc(-50% + var(--label-shift)), 0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .brand {
@@ -238,20 +240,50 @@ button {
   z-index: 80;
   padding: 22px 32px 0;
   height: 132px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 60%, rgba(255, 255, 255, 0) 100%);
+  /* Several stops on an easing curve (rather than one linear fade) so
+     the dissolve into the field below reads as gradual throughout,
+     without the single visible "edge" a two-stop fade tends to have. */
+  background: linear-gradient(
+    to bottom,
+    var(--paper) 0%,
+    var(--paper) 25%,
+    rgba(255, 255, 255, 0.94) 40%,
+    rgba(255, 255, 255, 0.8) 53%,
+    rgba(255, 255, 255, 0.58) 65%,
+    rgba(255, 255, 255, 0.36) 77%,
+    rgba(255, 255, 255, 0.16) 89%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
 }
 
+/* The viewport onto the infinite field. No native scrollbars — panning
+   is done by hand (drag + wheel, see app.js) so the field can move in
+   all four directions instead of just down. */
 .canvas-wrap {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 108px 20px 60px;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
+.canvas-wrap.dragging {
+  cursor: grabbing;
+}
+
+/* The "world" — chunks are absolutely positioned within it at their
+   world coordinates (which can be negative in any direction). Moved
+   entirely via transform (translate for pan, scale for zoom) rather
+   than by setting an explicit size, so it has no edges of its own. */
 .canvas {
-  position: relative;
-  min-height: 200px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* ---------------- photo card ---------------- */
@@ -278,33 +310,26 @@ button {
 }
 
 .photo-card:hover {
-  z-index: 999 !important;
+  /* Above every other (non-hovered) card — those top out at 70 — but
+     still safely under the header/nav's z-index:80, so a hovered card
+     never jumps above the fixed toolbar and its gradient. */
+  z-index: 79 !important;
 }
 
 .photo-card:hover .photo-frame {
-  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12);
-  outline-color: var(--yellow);
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 16px 1px var(--yellow-hover);
 }
 
 .photo-caption {
   margin-top: 6px;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
+  display: block;
   font-family: var(--font-body);
   font-size: 9.5px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
   color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
-}
-
-.photo-dots {
-  flex: 0 0 auto;
-  font-size: 6px;
-  letter-spacing: 2px;
-  color: var(--ink);
 }
 
 .photo-name {
@@ -313,25 +338,27 @@ button {
 }
 
 /* ---------------- metadata panel ----------------
-   A small floating note beside whichever image is selected — not a
-   dashboard. JS sets left/top per image (positionMetaPanel in app.js);
-   this just handles its own look and its show/hide transition. */
+   A small floating note, not a dashboard — fixed to the bottom-right
+   corner of the viewport (stacked above the zoom control) rather than
+   tracking the selected image, so it stays put while the field pans
+   underneath it. Same card-like treatment as a photo (paper, thin
+   line, --card-shadow) rather than a UI panel. */
 
 .meta-panel {
   position: fixed;
-  left: 0;
-  top: 0;
-  max-width: min(230px, calc(100vw - 28px));
-  background: rgba(255, 255, 255, 0.96);
+  right: 24px;
+  bottom: 72px;
+  max-width: min(230px, calc(100vw - 48px));
+  background: var(--paper);
   color: var(--ink);
   padding: 12px 14px;
   font-size: 11px;
   z-index: 150;
   pointer-events: none;
   border: 1px solid var(--line);
-  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--card-shadow);
   opacity: 0;
-  transform: translateY(3px);
+  transform: translateY(6px);
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
@@ -380,7 +407,7 @@ body.isolating .meta-caption {
   font-family: var(--font-body);
   font-size: 8.5px;
   font-weight: var(--weight-medium);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
@@ -437,7 +464,7 @@ body.isolating .meta-caption {
   flex: 0 0 auto;
   font-family: var(--font-body);
   font-size: 8px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
@@ -591,20 +618,26 @@ body.isolating .meta-caption {
   z-index: 160;
   width: 34px;
   height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   border: none;
   background: var(--yellow);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-style: italic;
-  font-weight: var(--weight-medium);
-  font-size: 14px;
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
 }
 
-.info-btn:hover,
-.info-btn[aria-expanded="true"] {
-  box-shadow: 0 0 0 7px var(--yellow-hover), 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+.info-btn-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Same treatment as the category symbols: a small wiggle, nothing
+   behind it — no glow ring, halo, or background change on hover. */
+.info-btn:hover .info-btn-icon,
+.info-btn:focus-visible .info-btn-icon {
+  animation: symbolWiggle 0.45s ease-in-out 1;
 }
 
 .info-panel {
@@ -651,6 +684,39 @@ body.isolating .meta-caption {
 .info-panel-close:hover {
   color: var(--ink);
   background-color: var(--yellow-hover);
+}
+
+/* ---------------- zoom control ---------------- */
+
+.zoom-controls {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 160;
+  display: flex;
+  align-items: stretch;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.zoom-btn:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.zoom-btn:hover {
+  box-shadow: inset 0 0 12px 1px var(--yellow-hover);
 }
 
 /* ---------------- mode hooks ----------------
@@ -721,11 +787,9 @@ body[data-mode="play-with-the-rules"] .photo-card.dragging .photo-frame {
      three symbols, however the flex-wrap happens to break otherwise. */
   .brand { flex-basis: 100%; }
 
-  .brand-name { font-size: 16px; }
+  .brand-name { font-size: 18px; }
 
-  .brand-sub { font-size: 9px; }
-
-  .canvas-wrap { padding-top: 190px; }
+  .brand-sub { font-size: 9.5px; }
 
   .isolation-stage {
     flex-direction: column;
