@@ -1,53 +1,37 @@
 /* ------------------------------------------------------------------
    modes/magnet.js
-   "MAGNET" (symbols/5.svg) — while active, only the photo the pointer
-   is currently over feels the pull toward it, stronger the closer the
-   pointer gets to that card's center; every other card is left alone.
-   Moving on (or leaving the archive) eases that card back to its
-   normal spot.
+   "MAGNET" (symbols/5.svg) — click a photo to make it the field's
+   center: it stays exactly where it is (never dragged, never pulled
+   itself), while every OTHER card within range eases toward it,
+   pulled harder the closer it already is — a field radiating from the
+   selected photo, not a cursor-follow effect. Clicking the same photo
+   again turns the field off; clicking a different one moves the
+   center there instead, which also releases whatever the previous
+   center was pulling toward it — it becomes an ordinary pullable card
+   again the very next frame, now judged against the new center.
 
-   Pressing and holding a card grabs it: while held, that one card
-   drops the ambient falloff and instead eases toward the pointer
-   directly (still eased, never a rigid 1:1 follow — an ordinary drag
-   would snap straight to the cursor, this keeps catching up to it),
-   with no cap on how far it can be carried — it tracks the pointer
-   anywhere across the canvas. The longer the hold continues, the
-   faster that catch-up gets, so the pull reads as progressively
-   stronger the longer the card is held rather than a single fixed
-   strength for the whole drag. Releasing it lets it fall straight
-   back into the same ambient/eased behavior as every other card,
-   which is what pulls it back to its normal spot rather than leaving
-   it wherever it was dropped — a real magnet loses its hold, it
-   doesn't leave the object stuck in place.
+   Clicking a card is how the field gets aimed, so a click never opens
+   isolation while this mode is active — the capture-phase listener
+   below intercepts it, same technique DUPLICATES uses to repurpose a
+   click for its own mode-specific gesture; nothing about scrolling or
+   the cards themselves changes.
 
-   A press only counts as a grab once it crosses a small movement
-   threshold (below it, the existing click-to-isolate behavior still
-   fires normally) — same technique PLAY WITH THE RULES uses — and only
-   that one swallowed click is stopped, so nothing else about clicking/
-   isolation/scrolling changes.
-
-   The pointer's canvas-local position is recomputed every animation
-   frame from the last raw client coordinates via
-   archive.screenToLocal() (zoom-aware — see its doc comment in app.js),
-   rather than being cached from the pointermove event itself — canvasEl
-   pans/zooms, so a wheel-scroll or zoom with no further mouse movement
-   would otherwise leave a stale or mis-scaled canvas-local point that
-   no longer lines up with whatever the cursor now sits over.
+   All the field's own math is card-to-card (the selected card's home
+   position vs. every other card's home position, both already in the
+   same canvas-local coordinate space via their inline left/top) — no
+   cursor tracking or pointer coordinate conversion needed at all.
 
    Performance: the card list is only re-queried periodically via
-   ctx.interval (also where stale offset state is pruned), not every
+   ctx.interval (also where stale offset state — and a center card
+   that's since scrolled out and been dropped — is pruned), not every
    frame, and the base .photo-card transition is turned off for the
    duration (see body[data-mode="magnet"] in style.css) so this mode's
    own per-frame easing is the only thing smoothing the motion.
 ------------------------------------------------------------------- */
 (function () {
-  const RADIUS = 260; // px — how far from the pointer the hovered card starts feeling the ambient pull (was 230)
-  const MAX_PULL = 48; // px — the ambient pull's strongest offset, right at the pointer (was 32) — clearer attraction now that the pointer math below is actually zoom-correct
-  const EASE = 0.16; // fraction of the remaining gap an ambient offset closes per frame
-  const DRAG_THRESHOLD = 4; // px of pointer movement before a press counts as a grab, not a click
-  const GRAB_EASE = 0.24; // catch-up fraction at the moment a card is grabbed
-  const GRAB_EASE_MAX = 0.7; // catch-up fraction the hold strength grows toward, for a progressively firmer pull
-  const GRAB_EASE_GROWTH = 0.35; // per second — how fast the hold strength climbs from GRAB_EASE toward GRAB_EASE_MAX
+  const RADIUS = 360; // px — how far from the center card the field reaches
+  const MAX_PULL = 75; // px — the strongest pull, for a card right next to the center
+  const EASE = 0.14; // fraction of the remaining gap an offset closes per frame
   const CARD_RESCAN_MS = 500; // how often the live card list is refreshed (pan/zoom loads and drops chunks)
 
   function cardCenter(card) {
@@ -64,10 +48,10 @@
 
     enter(ctx) {
       const canvasEl = ctx.archive.getCanvasEl();
-      const canvasWrap = ctx.archive.getCanvasWrapEl();
 
       let cards = ctx.archive.getCards();
       const offsets = new Map(); // card el -> current eased {x, y}, only kept while live/non-zero
+      let centerCard = null;
 
       ctx.interval(() => {
         cards = ctx.archive.getCards();
@@ -75,103 +59,44 @@
         for (const key of offsets.keys()) {
           if (!live.has(key)) offsets.delete(key); // card's chunk was dropped — drop its offset state too
         }
+        if (centerCard && !live.has(centerCard)) {
+          centerCard.classList.remove("magnet-center");
+          centerCard = null; // the field's center scrolled out and was dropped — turn the field off rather than pull toward a ghost
+        }
       }, CARD_RESCAN_MS);
 
-      // Raw viewport coordinates from the last pointermove, or null when
-      // the pointer isn't known to be over the archive — the canvas-local
-      // point derived from these is recomputed fresh every frame below.
-      ctx.scratch.client = null;
-      ctx.scratch.hoverCard = null; // the single card currently under the pointer — the only one the ambient pull acts on
-      ctx.on(canvasWrap, "pointermove", (e) => {
-        ctx.scratch.client = { x: e.clientX, y: e.clientY };
-        ctx.scratch.hoverCard = e.target.closest(".photo-card");
-      });
-      ctx.on(canvasWrap, "pointerleave", () => {
-        ctx.scratch.client = null;
-        ctx.scratch.hoverCard = null;
-      });
-
-      // ---- grab-to-drag: which card (if any) is currently held ----
-      let grab = null; // { card, pointerId, startX, startY, dragging }
-      let justDragged = false;
-
-      ctx.on(canvasEl, "pointerdown", (e) => {
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        if (grab) return; // ignore a second pointer landing while one is already held
-        const card = e.target.closest(".photo-card");
-        if (!card) return;
-        grab = { card, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, dragging: false };
-        card.setPointerCapture(e.pointerId);
-      });
-
-      ctx.on(canvasEl, "pointermove", (e) => {
-        if (!grab || grab.pointerId !== e.pointerId) return;
-        if (!grab.dragging) {
-          const dx = e.clientX - grab.startX, dy = e.clientY - grab.startY;
-          if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-          grab.dragging = true;
-          grab.startT = performance.now(); // when the hold began, so the pull can grow stronger the longer it's held
-          grab.card.classList.add("magnet-grabbed");
+      function setCenter(card) {
+        if (centerCard) centerCard.classList.remove("magnet-center");
+        centerCard = card;
+        if (centerCard) {
+          centerCard.classList.add("magnet-center");
+          offsets.delete(centerCard); // the center itself never carries a pull offset
         }
-      });
-
-      function releaseGrab(e) {
-        if (!grab || grab.pointerId !== e.pointerId) return;
-        if (grab.card.hasPointerCapture(e.pointerId)) grab.card.releasePointerCapture(e.pointerId);
-        if (grab.dragging) {
-          grab.card.classList.remove("magnet-grabbed");
-          justDragged = true; // swallow the click this pointerup would otherwise also fire
-        }
-        grab = null;
       }
-      ctx.on(canvasEl, "pointerup", releaseGrab);
-      ctx.on(canvasEl, "pointercancel", releaseGrab);
 
-      // A finished drag ending under the pointer would otherwise also
-      // pop the photo into isolation right after release — swallow
-      // exactly that one click, nothing else (a plain, un-dragged click
-      // still opens isolation as it always has).
       ctx.on(canvasEl, "click", (e) => {
-        if (justDragged) {
-          e.stopPropagation();
-          e.preventDefault();
-          justDragged = false;
-        }
+        const card = e.target.closest(".photo-card");
+        if (!card) return; // clicking open space doesn't touch the field
+        e.stopPropagation();
+        e.preventDefault();
+        setCenter(card === centerCard ? null : card);
       }, true);
 
-      ctx.loop((t) => {
-        const client = ctx.scratch.client;
-        // screenToLocal is zoom-aware (unlike subtracting a plain
-        // getBoundingClientRect(), which only lines up at zoom 1) — see
-        // its doc comment in app.js. Without this, the pull/drag target
-        // was computed in the wrong coordinate space whenever the field
-        // wasn't at exactly zoom 1 (the app's own default zoom is
-        // already below 1), which is what made the pull read as weak
-        // and a held card visibly lag behind the pointer instead of
-        // tracking it.
-        const pointer = client ? ctx.archive.screenToLocal(client.x, client.y) : null;
-
-        const activeCard = (grab && grab.dragging) ? grab.card : ctx.scratch.hoverCard;
+      ctx.loop(() => {
+        const center = centerCard ? cardCenter(centerCard) : null;
 
         cards.forEach((card) => {
-          const isGrabbed = grab && grab.dragging && grab.card === card;
-          const isActive = card === activeCard;
-          let targetX = 0, targetY = 0;
+          if (card === centerCard) return; // the center holds still — never eased, never offset
 
-          // Only the one card being hovered, clicked, or dragged ever gets
-          // a non-zero target — every other card's offset (if it still has
-          // one from a moment ago) simply eases back toward zero below.
-          if (pointer && isActive) {
+          let targetX = 0, targetY = 0;
+          if (center) {
             const c = cardCenter(card);
-            const dx = pointer.x - c.x;
-            const dy = pointer.y - c.y;
+            const dx = center.x - c.x;
+            const dy = center.y - c.y;
             const dist = Math.hypot(dx, dy);
-            if (isGrabbed) {
-              // No cap here: a held card tracks the pointer anywhere across
-              // the canvas rather than being boxed into a fixed reach.
-              targetX = dx;
-              targetY = dy;
-            } else if (dist < RADIUS && dist > 0.01) {
+            if (dist < RADIUS && dist > 0.01) {
+              // Closer cards feel a stronger pull — the field radiates
+              // outward from the center rather than applying evenly.
               const strength = (1 - dist / RADIUS) * MAX_PULL;
               targetX = (dx / dist) * strength;
               targetY = (dy / dist) * strength;
@@ -185,15 +110,10 @@
             offsets.set(card, cur);
           }
 
-          let ease = EASE;
-          if (isGrabbed) {
-            const heldSeconds = (t - grab.startT) / 1000;
-            ease = Math.min(GRAB_EASE_MAX, GRAB_EASE + heldSeconds * GRAB_EASE_GROWTH);
-          }
-          cur.x += (targetX - cur.x) * ease;
-          cur.y += (targetY - cur.y) * ease;
+          cur.x += (targetX - cur.x) * EASE;
+          cur.y += (targetY - cur.y) * EASE;
 
-          if (!isGrabbed && targetX === 0 && targetY === 0 && Math.abs(cur.x) < 0.05 && Math.abs(cur.y) < 0.05) {
+          if (targetX === 0 && targetY === 0 && Math.abs(cur.x) < 0.05 && Math.abs(cur.y) < 0.05) {
             card.style.transform = "";
             offsets.delete(card);
           } else {
@@ -204,10 +124,10 @@
     },
 
     exit(ctx) {
-      // Nothing beyond ctx's own auto-cleanup: it cancels the rAF loop
-      // and the rescan interval and removes the pointer listeners;
-      // archive.resetView()'s follow-up rebuild is what actually clears
-      // any transform this mode was still easing (grabbed or not).
+      // Nothing beyond ctx's own auto-cleanup: it cancels the rAF loop,
+      // the rescan interval, and the click listener; archive.resetView()'s
+      // follow-up rebuild is what actually clears any transform (and the
+      // "magnet-center" class) this mode was still easing.
     },
   });
 })();

@@ -680,23 +680,23 @@ body[data-mode="rain"] .photo-card.falling {
 
 /* MAGNET / DRIFT — both write a card's transform every animation
    frame with their own easing already baked in (a lerp toward the
-   pointer for MAGNET, a continuous sine path for DRIFT); the base
-   .photo-card transition would otherwise re-smooth every one of those
-   60-times-a-second updates on top, adding a second, laggier layer of
-   easing under the one already there. */
+   selected center for MAGNET, velocity/position integration for
+   DRIFT); the base .photo-card transition would otherwise re-smooth
+   every one of those 60-times-a-second updates on top, adding a
+   second, laggier layer of easing under the one already there. */
 body[data-mode="magnet"] .photo-card,
 body[data-mode="drift"] .photo-card {
   transition: none;
 }
 
-/* MAGNET — a press-and-hold grab cursor, same affordance convention as
-   PLAY WITH THE RULES' own grab/grabbing below. */
-body[data-mode="magnet"] .photo-card {
-  cursor: grab;
-}
-
-body[data-mode="magnet"] .photo-card.magnet-grabbed {
-  cursor: grabbing;
+/* MAGNET — clicking a photo makes it the field's center (see
+   js/modes/magnet.js); the base .photo-card cursor: pointer already
+   reads as clickable, so no override is needed here. The center gets
+   a soft glow on its frame, the same yellow already used for a
+   hovered card's glow, so it's clear which photo the field is
+   radiating from. */
+body[data-mode="magnet"] .photo-card.magnet-center .photo-frame {
+  box-shadow: 0 0 24px 6px rgba(255, 204, 0, 0.6);
 }
 
 /* PLAY WITH THE RULES — pick-up-and-move cards (js/modes/play-with-the-rules.js) */
