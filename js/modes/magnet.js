@@ -1,46 +1,44 @@
 /* ------------------------------------------------------------------
    modes/magnet.js
-   "MAGNET" (symbols/5.svg) — press a photo to make it the field's
-   center: it stays exactly where it is (never dragged, never pulled
-   itself), while every OTHER card within range eases toward it,
-   pulled harder the closer it already is — a field radiating from the
-   selected photo, not a cursor-follow effect. The field also grows
-   the longer the center is continuously held down (see GROWTH_SECONDS
-   below): both its reach and its pull strength ramp up toward a grown
-   maximum the longer the press lasts, dropping back to the base
-   strength the instant it's released (still eased, so nothing about
-   that ever snaps). Clicking the already-selected center again turns
-   the field off; pressing a different card moves the center there
-   instead — right away, so a fresh selection can start growing during
-   that same press rather than needing a second one — which also
-   releases whatever the previous center was pulling toward it: it
-   becomes an ordinary pullable card again the very next frame, now
-   judged against the new center.
+   "MAGNET" (symbols/5.svg) — hovering a photo makes it the field's
+   center right away, no click needed: it stays exactly where it is
+   (never dragged, never pulled itself), while every OTHER card within
+   range immediately starts easing toward it, pulled harder the closer
+   it already is — a field radiating from whichever photo the pointer
+   is currently over, not a cursor-follow effect. Moving the pointer to
+   a different photo simply moves the center there; moving off every
+   photo turns the field off. Pressing and holding down on the hovered
+   photo instantly amplifies the field to a much stronger, much
+   wider-reaching state for as long as it's held — no ramp-up, the jump
+   happens on the very next frame — and it drops back to the ambient
+   hover strength the instant it's released.
 
-   Selecting/deselecting the center is how a click gets used here, so a
+   Clicking is only ever a side effect of hovering + pressing here
+   (never a deliberate "select" gesture the way it used to be), so a
    click never opens isolation while this mode is active — the
-   capture-phase listener below intercepts it, same technique
-   DUPLICATES uses to repurpose a click for its own mode-specific
-   gesture; nothing about scrolling or the cards themselves changes.
+   capture-phase listener below unconditionally swallows it, same
+   technique DUPLICATES uses to repurpose a click for its own
+   mode-specific gesture; nothing about scrolling or the cards
+   themselves changes.
 
-   All the field's own math is card-to-card (the selected card's home
+   All the field's own math is card-to-card (the center card's home
    position vs. every other card's home position, both already in the
-   same canvas-local coordinate space via their inline left/top) — no
-   cursor tracking or pointer coordinate conversion needed at all.
+   same canvas-local coordinate space via their inline left/top) — the
+   only thing actually tracked from the pointer is which single card
+   (if any) it's currently over, and whether a button is currently
+   held down.
 
    Performance: the card list is only re-queried periodically via
-   ctx.interval (also where stale offset state — and a center card
-   that's since scrolled out and been dropped — is pruned), not every
+   ctx.interval (also where stale offset state is pruned), not every
    frame, and the base .photo-card transition is turned off for the
    duration (see body[data-mode="magnet"] in style.css) so this mode's
    own per-frame easing is the only thing smoothing the motion.
 ------------------------------------------------------------------- */
 (function () {
-  const RADIUS = 360; // px — how far from the center card the field reaches at rest
-  const MAX_PULL = 75; // px — the strongest pull (right next to the center) at rest
-  const RADIUS_GROWN = 520; // px — the field's reach once the center has been held the full GROWTH_SECONDS
-  const MAX_PULL_GROWN = 150; // px — the strongest pull once fully grown
-  const GROWTH_SECONDS = 3; // how long a continuous press on the center takes to reach the grown strength above
+  const RADIUS = 620; // px — how far from the hovered card the field reaches at rest
+  const MAX_PULL = 95; // px — the strongest pull (right next to the center) at rest
+  const RADIUS_PRESSED = 950; // px — the field's reach while the center is actively held down
+  const MAX_PULL_PRESSED = 240; // px — the strongest pull while actively held down
   const EASE = 0.14; // fraction of the remaining gap an offset closes per frame
   const CARD_RESCAN_MS = 500; // how often the live card list is refreshed (pan/zoom loads and drops chunks)
 
@@ -58,10 +56,12 @@
 
     enter(ctx) {
       const canvasEl = ctx.archive.getCanvasEl();
+      const canvasWrap = ctx.archive.getCanvasWrapEl();
 
       let cards = ctx.archive.getCards();
       const offsets = new Map(); // card el -> current eased {x, y}, only kept while live/non-zero
-      let centerCard = null;
+      let hoverCard = null; // the single card currently under the pointer — the field's center, or null when off every card
+      let pressed = false; // a pointer button is currently held down somewhere over the canvas
 
       ctx.interval(() => {
         cards = ctx.archive.getCards();
@@ -69,77 +69,54 @@
         for (const key of offsets.keys()) {
           if (!live.has(key)) offsets.delete(key); // card's chunk was dropped — drop its offset state too
         }
-        if (centerCard && !live.has(centerCard)) {
-          centerCard.classList.remove("magnet-center");
-          centerCard = null; // the field's center scrolled out and was dropped — turn the field off rather than pull toward a ghost
+        if (hoverCard && !live.has(hoverCard)) {
+          hoverCard.classList.remove("magnet-center");
+          hoverCard = null; // the field's center scrolled out and was dropped — turn the field off rather than pull toward a ghost
         }
       }, CARD_RESCAN_MS);
 
-      function setCenter(card) {
-        if (centerCard) centerCard.classList.remove("magnet-center");
-        centerCard = card;
-        if (centerCard) {
-          centerCard.classList.add("magnet-center");
-          offsets.delete(centerCard); // the center itself never carries a pull offset
+      function setHover(card) {
+        if (card === hoverCard) return;
+        if (hoverCard) hoverCard.classList.remove("magnet-center");
+        hoverCard = card;
+        if (hoverCard) {
+          hoverCard.classList.add("magnet-center");
+          offsets.delete(hoverCard); // the center itself never carries a pull offset
         }
       }
 
-      // Tracks how long the current center has been continuously held
-      // down, for the field's own growth (see GROWTH_SECONDS above) —
-      // pressWasCenter is captured at press time so the later "click"
-      // (which fires on release) can tell whether this press just
-      // selected a fresh center (leave it selected) or re-pressed the
-      // one that was already selected (that's what should deselect it).
-      let pressedCard = null;
-      let pressStartT = 0;
-      let pressWasCenter = false;
-
-      ctx.on(canvasEl, "pointerdown", (e) => {
-        const card = e.target.closest(".photo-card");
-        if (!card) return;
-        pressedCard = card;
-        pressStartT = performance.now();
-        pressWasCenter = card === centerCard;
-        // A press on a not-yet-selected card makes it the center right
-        // away rather than waiting for release, so the field can start
-        // growing during this very same press.
-        if (!pressWasCenter) setCenter(card);
+      ctx.on(canvasWrap, "pointermove", (e) => {
+        setHover(e.target.closest(".photo-card"));
       });
+      ctx.on(canvasWrap, "pointerleave", () => setHover(null));
 
-      function clearPress() {
-        pressedCard = null;
-      }
-      ctx.on(canvasEl, "pointerup", clearPress);
-      ctx.on(canvasEl, "pointercancel", clearPress);
+      ctx.on(canvasEl, "pointerdown", () => { pressed = true; });
+      function release() { pressed = false; }
+      ctx.on(canvasEl, "pointerup", release);
+      ctx.on(canvasEl, "pointercancel", release);
 
+      // Hovering/pressing is how the field gets aimed here, so a click
+      // never opens isolation while this mode is active.
       ctx.on(canvasEl, "click", (e) => {
-        const card = e.target.closest(".photo-card");
-        if (!card) return; // clicking open space doesn't touch the field
+        if (!e.target.closest(".photo-card")) return;
         e.stopPropagation();
         e.preventDefault();
-        // Re-clicking the card that was already the center when this
-        // press started turns the field off; clicking to select a new
-        // one is already handled by the pointerdown above.
-        if (pressWasCenter && card === centerCard) setCenter(null);
       }, true);
 
-      ctx.loop((t) => {
-        const center = centerCard ? cardCenter(centerCard) : null;
+      ctx.loop(() => {
+        const center = hoverCard ? cardCenter(hoverCard) : null;
 
-        // The field grows for as long as the center is continuously
-        // held down, and drops back to the base strength the instant
-        // it's released (still eased below, so it's never a snap) —
-        // growth is 0 whenever the center isn't actively being pressed
-        // right now, not just frozen wherever it last reached.
-        let growth = 0;
-        if (centerCard && pressedCard === centerCard) {
-          growth = Math.min(1, (t - pressStartT) / 1000 / GROWTH_SECONDS);
-        }
-        const radius = RADIUS + (RADIUS_GROWN - RADIUS) * growth;
-        const maxPull = MAX_PULL + (MAX_PULL_GROWN - MAX_PULL) * growth;
+        // No ramp-up: holding down on the center amplifies the field
+        // to its stronger, wider-reaching state on the very next
+        // frame, and it drops back just as instantly on release — only
+        // each individual card's own eased approach (below) is what
+        // keeps the motion smooth.
+        const boosted = pressed && hoverCard;
+        const radius = boosted ? RADIUS_PRESSED : RADIUS;
+        const maxPull = boosted ? MAX_PULL_PRESSED : MAX_PULL;
 
         cards.forEach((card) => {
-          if (card === centerCard) return; // the center holds still — never eased, never offset
+          if (card === hoverCard) return; // the center holds still — never eased, never offset
 
           let targetX = 0, targetY = 0;
           if (center) {
@@ -178,9 +155,10 @@
 
     exit(ctx) {
       // Nothing beyond ctx's own auto-cleanup: it cancels the rAF loop,
-      // the rescan interval, and the click listener; archive.resetView()'s
-      // follow-up rebuild is what actually clears any transform (and the
-      // "magnet-center" class) this mode was still easing.
+      // the rescan interval, and the pointer/click listeners;
+      // archive.resetView()'s follow-up rebuild is what actually clears
+      // any transform (and the "magnet-center" class) this mode was
+      // still easing.
     },
   });
 })();

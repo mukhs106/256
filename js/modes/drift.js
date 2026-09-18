@@ -49,7 +49,7 @@
 (function () {
   const PUSH_RADIUS = 280; // px — how far from the pointer a card starts feeling the push
   const PUSH_ACCEL = 900; // px/s² — repulsion strength right at the pointer (falls off with distance below)
-  const WANDER_ACCEL = 11; // px/s² — the small, constant push along a card's own current heading that drives ambient drift (was 7 — slightly stronger so the drift itself reads as visibly moving even before the cursor ever gets near)
+  const WANDER_ACCEL = 26; // px/s² — the small, constant push along a card's own current heading that drives ambient drift (was 11 — noticeably faster continuous drift; nothing else about the wander/push behavior below changed)
   // A random walk's spread grows with sqrt(time), not time itself, so
   // the per-frame nudge below is scaled by sqrt(dt) rather than dt —
   // scaling by dt alone (an easy mistake) makes the total turn shrink

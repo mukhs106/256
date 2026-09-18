@@ -150,12 +150,18 @@ button {
 }
 
 /* Active mode indicator — the symbol grows to its full original size
-   rather than gaining any background treatment, so the box's own
-   dimensions (and everything around it) never shift; transform scales
-   from the img's own center, which the flex-centered .nav-symbol box
-   already keeps aligned. */
+   (box/hit-area dimensions never shift; transform scales from the
+   img's own center, which the flex-centered .nav-symbol box already
+   keeps aligned), plus a soft yellow glow behind it via the ::before
+   above, so the active state reads as gently illuminated rather than
+   only larger. */
 .nav-symbol.active img {
   --nav-scale: 1;
+}
+
+.nav-symbol.active::before {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* A very small, quick wobble on hover/focus — reuses symbolWiggle
@@ -594,13 +600,25 @@ button {
    own to animate rather than fighting theirs. JS sets each frame's
    --wig-x/--wig-y/--wig-rot/--wig-pop and its own animation-delay/
    -duration inline for per-card variation; 0% and 100% are both the
-   identity transform so it always lands back exactly where it started. */
+   identity transform so it always lands back exactly where it started.
+
+   A card that's part of this trigger's shuffle (see earthquake.js)
+   also gets --shuffle-dx/--shuffle-dy: the vector back to where it
+   visually was before its position/size were swapped with a neighbor.
+   The leading translate() in each stop blends that vector down to
+   zero across the animation, so the card glides into its real new
+   spot at the same time as it wiggles, rather than snapping there
+   instantly. Chaining it before the wiggle's own translate() (rather
+   than combining into one) keeps both additive regardless of the
+   rotate/scale later in the same stop; an unshuffled card simply gets
+   translate(0px, 0px) here via the var() fallback, so nothing changes
+   for it. */
 @keyframes cardWiggle {
-  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-  20%  { transform: translate(calc(var(--wig-x) * 0.6), calc(var(--wig-y) * -0.4)) rotate(calc(var(--wig-rot) * 0.5)) scale(calc(1 + var(--wig-pop, 0) * 0.55)); }
-  45%  { transform: translate(calc(var(--wig-x) * -0.85), calc(var(--wig-y) * 0.9)) rotate(calc(var(--wig-rot) * -0.9)) scale(calc(1 + var(--wig-pop, 0))); }
-  70%  { transform: translate(calc(var(--wig-x) * 0.4), calc(var(--wig-y) * -0.3)) rotate(calc(var(--wig-rot) * 0.35)) scale(calc(1 + var(--wig-pop, 0) * 0.3)); }
-  100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  0%   { transform: translate(var(--shuffle-dx, 0px), var(--shuffle-dy, 0px)) translate(0, 0) rotate(0deg) scale(1); }
+  20%  { transform: translate(calc(var(--shuffle-dx, 0px) * 0.55), calc(var(--shuffle-dy, 0px) * 0.55)) translate(calc(var(--wig-x) * 0.6), calc(var(--wig-y) * -0.4)) rotate(calc(var(--wig-rot) * 0.5)) scale(calc(1 + var(--wig-pop, 0) * 0.55)); }
+  45%  { transform: translate(calc(var(--shuffle-dx, 0px) * 0.22), calc(var(--shuffle-dy, 0px) * 0.22)) translate(calc(var(--wig-x) * -0.85), calc(var(--wig-y) * 0.9)) rotate(calc(var(--wig-rot) * -0.9)) scale(calc(1 + var(--wig-pop, 0))); }
+  70%  { transform: translate(calc(var(--shuffle-dx, 0px) * 0.06), calc(var(--shuffle-dy, 0px) * 0.06)) translate(calc(var(--wig-x) * 0.4), calc(var(--wig-y) * -0.3)) rotate(calc(var(--wig-rot) * 0.35)) scale(calc(1 + var(--wig-pop, 0) * 0.3)); }
+  100% { transform: translate(0, 0) translate(0, 0) rotate(0deg) scale(1); }
 }
 
 .photo-frame.fx-wiggle {
