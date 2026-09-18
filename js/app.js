@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, symbolLabels } = window.APP_DATA;
+  const { images } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -62,22 +62,6 @@
     })));
   }
 
-  // ---------- icon nav (category symbols) ----------
-  // Purely a label reveal for now — the symbols aren't wired to
-  // filtering yet, so this just pairs each static nav-symbol with its
-  // name from data.js, in order.
-
-  function renderSymbolLabels() {
-    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
-      const label = sym.querySelector(".nav-symbol-label");
-      if (!label) return;
-      // SYMBOL_LABELS is written in caps in data.js (matching the
-      // COLLECTIONS list it mirrors); lowercased here for display,
-      // same as collection names are elsewhere.
-      label.textContent = (symbolLabels[i] || "").toLowerCase();
-    });
-  }
-
   // Not called from anywhere yet (no UI sets a collection id besides
   // "all") — left in place for the symbol-driven filtering that will
   // replace the old sidebar's job.
@@ -98,6 +82,14 @@
     return (window.MODE_CONFIG && window.MODE_CONFIG[key]) || null;
   }
 
+  // Instant, one-shot symbol effects (js/effects/*.js) — checked first,
+  // ahead of the mode system below, since a symbol is only ever wired
+  // to one or the other (see js/modes-config.js).
+  function symbolFxKeyForIndex(i) {
+    const key = "symbol_" + (i + 1);
+    return (window.SYMBOL_FX_CONFIG && window.SYMBOL_FX_CONFIG[key]) || null;
+  }
+
   function setActiveSymbolUI(activeIndex) {
     document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
       const isActive = i === activeIndex;
@@ -110,7 +102,13 @@
   // back off (plain archive, no symbol marked active) rather than
   // re-entering it — the reserved symbol (mapped to null) always lands
   // here too, since it has no mode to turn on.
-  function handleSymbolActivate(i) {
+  function handleSymbolActivate(i, e) {
+    const fxKey = symbolFxKeyForIndex(i);
+    if (fxKey && window.SymbolFX && typeof window.SymbolFX[fxKey] === "function") {
+      window.SymbolFX[fxKey](ArchiveAPI, e); // e lets an effect place an activation cue at the triggering click; entirely optional
+      return; // an instant trigger never touches mode state or the active-symbol indicator
+    }
+
     const modeId = modeIdForSymbolIndex(i);
     const turningOn = modeId && window.ModeManager.getActiveId() !== modeId;
     window.ModeManager.activate(turningOn ? modeId : null);
@@ -119,11 +117,11 @@
 
   function wireModeSwitching() {
     document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
-      sym.addEventListener("click", () => handleSymbolActivate(i));
+      sym.addEventListener("click", (e) => handleSymbolActivate(i, e));
       sym.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          handleSymbolActivate(i);
+          handleSymbolActivate(i, e);
         }
       });
     });
@@ -147,15 +145,12 @@
     frame.appendChild(photo);
     el.appendChild(frame);
 
-    // Primary photos get one dot before the name, secondary get two.
-    const dots = img.type === "primary" ? "●" : "●●";
+    // Every image gets the same single dot before its name.
     const caption = document.createElement("div");
     caption.className = "photo-caption";
-    caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
+    caption.innerHTML = `<span class="photo-dots">●</span><span class="photo-name">${img.code}</span>`;
     el.appendChild(caption);
 
-    el.addEventListener("mouseenter", () => showMeta(img));
-    el.addEventListener("mouseleave", hideMeta);
     el.addEventListener("click", () => openIsolation(img));
     return el;
   }
@@ -231,7 +226,6 @@
     if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
     const top = Math.max(0, colHeights[col] + gap);
 
-    const rotation = (Math.random() * 14 - 7).toFixed(1);
     const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
 
     const el = makeCard(img);
@@ -239,7 +233,7 @@
     el.style.left = left + "px";
     el.style.top = top + "px";
     el.style.width = w + "px";
-    el.style.transform = `rotate(${rotation}deg)`;
+    el.style.transform = "rotate(0)";
     el.style.zIndex = z;
     el.querySelector(".photo-frame").style.height = h + "px";
     container.appendChild(el);
@@ -435,60 +429,6 @@
     ensureChunksLoaded();
   }
 
-  // ---------- metadata panel (a small floating note, bottom-right) ----------
-  // image name + type stay on the `img` object (used for captions
-  // elsewhere) but are intentionally not surfaced in this panel.
-  // kept/connection/returned are the primary, always-labeled fields;
-  // when/where/source are secondary and only appear when filled in, so
-  // they never compete with the primary three. Fixed to a corner of
-  // the viewport rather than tracking the selected image, so it stays
-  // put while the field pans underneath it.
-
-  function setMetaPanel(img) {
-    const caption = document.getElementById("meta-caption");
-    caption.textContent = img ? img.caption : "";
-    caption.hidden = !(img && img.caption);
-
-    document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
-    document.getElementById("meta-connection").textContent = img ? img.connection : "";
-    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
-
-    const secondary = [
-      ["meta-when-row", img && img.dateLabel, "meta-when", img && img.dateLabel],
-      ["meta-where-row", img && img.location, "meta-where", img && img.location],
-      ["meta-source-row", img && img.source, "meta-source", img && img.source],
-    ];
-    let anySecondary = false;
-    secondary.forEach(([rowId, has, valId, val]) => {
-      document.getElementById(rowId).hidden = !has;
-      document.getElementById(valId).textContent = val || "";
-      if (has) anySecondary = true;
-    });
-    document.getElementById("meta-secondary").hidden = !anySecondary;
-  }
-
-  // Does the actual work of showing the panel for `img`. Used directly
-  // by the isolation view (which manages its own open/closed state)
-  // and, guarded, by card hover below.
-  function applyMetaPanel(img) {
-    setMetaPanel(img);
-    document.getElementById("meta-panel").classList.add("visible");
-  }
-
-  function hideMetaPanel() {
-    document.getElementById("meta-panel").classList.remove("visible");
-  }
-
-  function showMeta(img) {
-    if (!document.getElementById("isolation").hidden) return;
-    applyMetaPanel(img);
-  }
-
-  function hideMeta() {
-    if (!document.getElementById("isolation").hidden) return;
-    hideMetaPanel();
-  }
-
   // ---------- isolation view ----------
 
   // A mode can swap out which images get suggested when the viewer
@@ -626,9 +566,6 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // The isolation view has no metadata dock beside it.
-    setMetaPanel(null);
-
     renderTrail();
     renderPaths(img);
   }
@@ -646,7 +583,6 @@
     document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
-    hideMetaPanel();
   }
 
   // ---------- info panel ----------
@@ -685,8 +621,6 @@
     },
     openIsolation,
     closeIsolation,
-    showMeta,
-    hideMeta,
     setAutoExtend(on) { autoExtendEnabled = !!on; },
     // Lets a mode change which images get suggested when the viewer
     // opens a photo (the isolation view's flanking "paths" + trail —
@@ -709,8 +643,7 @@
     // reset); ModeManager also calls it on every mode switch, via
     // resetView() below.
     rerender() {
-      resetField();
-      hideMeta();
+      renderCanvas();
     },
     // The reset hook ModeManager calls on every mode switch, before the
     // next mode (if any) enters.
@@ -739,9 +672,7 @@
     canvasWrapEl = document.getElementById("canvas-wrap");
     toolbarEl = document.querySelector(".toolbar");
 
-    resetField();
-    renderSymbolLabels();
-    hideMetaPanel();
+    renderCanvas();
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
@@ -781,7 +712,7 @@
       if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
     });
 
-    window.addEventListener("resize", debounce(ensureChunksLoaded, 200));
+    window.addEventListener("resize", debounce(() => { renderCanvas(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);
