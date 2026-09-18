@@ -121,26 +121,17 @@ button {
   object-fit: contain;
   position: relative;
   z-index: 1;
+  transition: transform 0.15s ease;
 }
 
-/* Active mode indicator — a soft halo behind the symbol whose mode is
-   currently on, via an absolutely positioned pseudo-element so the glow
-   can breathe without ever changing the box's own dimensions (no layout
-   shift). Symbols have no hover/focus treatment — they stay visually
-   plain until clicked. */
-.nav-symbol::before {
-  content: "";
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  background: var(--yellow-hover);
-  opacity: 0;
-  transform: scale(1);
-  pointer-events: none;
-}
-
-.nav-symbol.active::before {
-  opacity: 0.55;
+/* Active mode indicator — the symbol itself shrinks slightly rather
+   than gaining any background treatment, so the box's own dimensions
+   (and everything around it) never shift; transform scales from the
+   img's own center, which the flex-centered .nav-symbol box already
+   keeps aligned. Symbols have no hover/focus treatment — they stay
+   visually plain until clicked. */
+.nav-symbol.active img {
+  transform: scale(0.87);
 }
 
 .brand {
