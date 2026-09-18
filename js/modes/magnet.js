@@ -10,16 +10,25 @@
    `transform`, the same property placeImage() in app.js already sets
    it to `rotate(0)`, so there's nothing else to reconcile it with.
 
-   Performance: the pointer position is only ever read from the last
-   pointermove event (no per-frame DOM measurement of it), and the card
-   list itself is only re-queried periodically via ctx.interval — the
-   one thing that has to run every animation frame is the small per-
-   card arithmetic below, not a DOM query.
+   The pointer's canvas-local position is recomputed every animation
+   frame from the last raw client coordinates + a fresh
+   getBoundingClientRect(), rather than being cached from the
+   pointermove event itself — canvasEl scrolls inside canvasWrap, so a
+   wheel-scroll with no further mouse movement would otherwise leave a
+   stale canvas-local point that no longer lines up with whatever the
+   cursor now sits over.
+
+   Performance: the card list is only re-queried periodically via
+   ctx.interval, not every frame, and the base .photo-card transition
+   is turned off for the duration (see body[data-mode="magnet"] in
+   style.css) so this mode's own per-frame easing is the only thing
+   smoothing the motion — layering the CSS transition on top of an
+   already-eased value that changes 60x/second would just add lag.
 ------------------------------------------------------------------- */
 (function () {
-  const RADIUS = 220; // px — how far from the pointer a card starts feeling a pull
-  const MAX_PULL = 26; // px — the strongest pull, right at the pointer
-  const EASE = 0.12; // fraction of the remaining gap a card's eased offset closes per frame
+  const RADIUS = 190; // px — how far from the pointer a card starts feeling a pull
+  const MAX_PULL = 24; // px — the strongest pull, right at the pointer
+  const EASE = 0.16; // fraction of the remaining gap a card's eased offset closes per frame
   const CARD_RESCAN_MS = 500; // how often the live card list is refreshed (scroll extends/prunes it)
 
   function cardCenter(card) {
@@ -41,17 +50,24 @@
       let cards = ctx.archive.getCards();
       ctx.interval(() => { cards = ctx.archive.getCards(); }, CARD_RESCAN_MS);
 
-      ctx.scratch.pointer = null; // canvas-local {x, y}, or null when the pointer isn't over the archive
+      // Raw viewport coordinates from the last pointermove, or null when
+      // the pointer isn't known to be over the archive — the canvas-local
+      // point derived from these is recomputed fresh every frame below.
+      ctx.scratch.client = null;
       ctx.on(canvasWrap, "pointermove", (e) => {
-        const rect = canvasEl.getBoundingClientRect();
-        ctx.scratch.pointer = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        ctx.scratch.client = { x: e.clientX, y: e.clientY };
       });
-      ctx.on(canvasWrap, "pointerleave", () => { ctx.scratch.pointer = null; });
+      ctx.on(canvasWrap, "pointerleave", () => { ctx.scratch.client = null; });
 
       const offsets = new Map(); // card el -> current eased {x, y}, only kept while non-zero
 
       ctx.loop(() => {
-        const pointer = ctx.scratch.pointer;
+        const client = ctx.scratch.client;
+        let pointer = null;
+        if (client) {
+          const rect = canvasEl.getBoundingClientRect();
+          pointer = { x: client.x - rect.left, y: client.y - rect.top };
+        }
 
         cards.forEach((card) => {
           const c = cardCenter(card);

@@ -30,7 +30,9 @@
 ------------------------------------------------------------------- */
 (function () {
   const MAX_PER_ORIGIN = 20;
-  const OFFSET_RANGE = 30; // px, how far a fresh duplicate can land from its source, each axis
+  const OFFSET_MIN = 22; // px, how far the earliest duplicates land from their source
+  const OFFSET_MAX = 52; // px, how far duplicates land once a cluster has grown — spreads out more as it builds up
+  const ROTATION_MAX = 10; // deg, grows alongside the offset for the same "increasingly playful" reason
 
   // A duplicate always points back to the original photo it traces to,
   // never to whichever copy happened to get clicked.
@@ -60,13 +62,21 @@
         const left = parseFloat(source.style.left) || 0;
         const top = parseFloat(source.style.top) || 0;
 
+        // A cluster spreads and tilts a little further with every added
+        // copy, so repeated clicking visibly builds toward something
+        // messier rather than always landing the same modest offset.
+        const grown = count / MAX_PER_ORIGIN;
+        const offsetRange = OFFSET_MIN + (OFFSET_MAX - OFFSET_MIN) * grown;
+        const rotation = (Math.random() * 2 - 1) * ROTATION_MAX * (0.3 + 0.7 * grown);
+
         const clone = source.cloneNode(true);
         clone.classList.add("duplicate-card");
         delete clone.dataset.id;
         clone.dataset.duplicateOrigin = originId;
-        clone.style.left = (left + (Math.random() * 2 - 1) * OFFSET_RANGE) + "px";
-        clone.style.top = (top + (Math.random() * 2 - 1) * OFFSET_RANGE) + "px";
+        clone.style.left = (left + (Math.random() * 2 - 1) * offsetRange) + "px";
+        clone.style.top = (top + (Math.random() * 2 - 1) * offsetRange) + "px";
         clone.style.zIndex = String(zCounter++);
+        clone.style.setProperty("--duplicate-rot", rotation.toFixed(1) + "deg");
 
         ctx.addTempNode(clone, canvasEl);
         counts.set(originId, count + 1);

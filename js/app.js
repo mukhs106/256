@@ -102,10 +102,10 @@
   // back off (plain archive, no symbol marked active) rather than
   // re-entering it — the reserved symbol (mapped to null) always lands
   // here too, since it has no mode to turn on.
-  function handleSymbolActivate(i) {
+  function handleSymbolActivate(i, e) {
     const fxKey = symbolFxKeyForIndex(i);
     if (fxKey && window.SymbolFX && typeof window.SymbolFX[fxKey] === "function") {
-      window.SymbolFX[fxKey](ArchiveAPI);
+      window.SymbolFX[fxKey](ArchiveAPI, e); // e lets an effect place an activation cue at the triggering click; entirely optional
       return; // an instant trigger never touches mode state or the active-symbol indicator
     }
 
@@ -117,11 +117,11 @@
 
   function wireModeSwitching() {
     document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
-      sym.addEventListener("click", () => handleSymbolActivate(i));
+      sym.addEventListener("click", (e) => handleSymbolActivate(i, e));
       sym.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          handleSymbolActivate(i);
+          handleSymbolActivate(i, e);
         }
       });
     });

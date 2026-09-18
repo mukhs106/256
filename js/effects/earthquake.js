@@ -12,7 +12,7 @@
    started — this file only ever adds/removes the class that starts it.
 ------------------------------------------------------------------- */
 (function () {
-  const DURATION_MS = 1000; // matches archiveEarthquake's animation-duration in style.css
+  const DURATION_MS = 950; // matches archiveEarthquake's animation-duration in style.css
 
   let removeTimer = null;
 

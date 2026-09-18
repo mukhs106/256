@@ -29,6 +29,8 @@
        still happen to be in the DOM.
 ------------------------------------------------------------------- */
 (function () {
+  let zCounter = 998; // each new fall renders above every earlier one, avoiding arbitrary stacking when several are falling together
+
   function triggerFall(ctx, card) {
     if (card.dataset.falling === "1") return; // already on its way down
     card.dataset.falling = "1";
@@ -44,11 +46,12 @@
     const duration = 900 + Math.random() * 500; // ms, within the "falls, then disappears" feel
     const drift = (Math.random() * 2 - 1) * 40; // px of sideways wander as it falls
     const rotation = (Math.random() * 16 - 8).toFixed(1); // a very slight tumble, not a full spin
+    const scale = (0.8 + Math.random() * 0.08).toFixed(2); // shrinks slightly, reading as receding rather than just sliding down
 
-    card.style.zIndex = 998;
+    card.style.zIndex = String(zCounter++);
     card.style.transition = `transform ${duration}ms cubic-bezier(0.55, 0, 1, 0.45)`; // ease-in, gravity-like acceleration
     requestAnimationFrame(() => {
-      card.style.transform = `translate(${drift.toFixed(1)}px, ${distance.toFixed(1)}px) rotate(${rotation}deg)`;
+      card.style.transform = `translate(${drift.toFixed(1)}px, ${distance.toFixed(1)}px) rotate(${rotation}deg) scale(${scale})`;
     });
 
     ctx.timeout(() => card.remove(), duration + 60);
