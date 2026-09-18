@@ -212,9 +212,9 @@ button {
 .brand-sub {
   font-family: var(--font-body);
   font-size: 13px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
   color: #2F2965;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* ---------------- main ---------------- */
@@ -297,7 +297,7 @@ button {
   position: relative;
   overflow: hidden;
   background: var(--line);
-  box-shadow: var(--card-shadow);
+  box-shadow: rgba(255, 255, 255, 0.4);
   outline: 1px solid rgba(255, 255, 255, 0.4);
   outline-offset: -1px;
 }
@@ -421,8 +421,8 @@ body.isolating .meta-caption {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* "returned to" is still a primary field (always labeled) but quieter
