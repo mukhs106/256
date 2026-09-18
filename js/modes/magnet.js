@@ -9,9 +9,11 @@
    a different photo simply moves the center there; moving off every
    photo turns the field off. Pressing and holding down on the hovered
    photo instantly amplifies the field to a much stronger, much
-   wider-reaching state for as long as it's held — no ramp-up, the jump
-   happens on the very next frame — and it drops back to the ambient
-   hover strength the instant it's released.
+   wider-reaching state — no ramp-up, the jump happens on the very next
+   frame — and it keeps climbing continuously for as long as the press
+   is held (see HOLD_GROWTH_RATE below: no cap, no timeout — it only
+   ever stops climbing when the press actually ends), dropping back to
+   the ambient hover strength the instant it's released.
 
    Clicking is only ever a side effect of hovering + pressing here
    (never a deliberate "select" gesture the way it used to be), so a
@@ -37,8 +39,15 @@
 (function () {
   const RADIUS = 620; // px — how far from the hovered card the field reaches at rest
   const MAX_PULL = 95; // px — the strongest pull (right next to the center) at rest
-  const RADIUS_PRESSED = 950; // px — the field's reach while the center is actively held down
-  const MAX_PULL_PRESSED = 240; // px — the strongest pull while actively held down
+  const RADIUS_PRESSED = 950; // px — the field's reach the instant the center is pressed down (before any hold-growth)
+  const MAX_PULL_PRESSED = 240; // px — the strongest pull the instant the center is pressed down
+  // How much further the field keeps growing the longer the press is
+  // held — sqrt(heldSeconds) rather than heldSeconds itself, so it's a
+  // continuous, ever-increasing climb with no cap or timeout (it never
+  // stops on its own) but naturally decelerates rather than running
+  // away to absurd values over a very long hold.
+  const HOLD_GROWTH_RADIUS = 90; // px per sqrt(second) held, added on top of RADIUS_PRESSED
+  const HOLD_GROWTH_PULL = 30; // px per sqrt(second) held, added on top of MAX_PULL_PRESSED
   const EASE = 0.14; // fraction of the remaining gap an offset closes per frame
   const CARD_RESCAN_MS = 500; // how often the live card list is refreshed (pan/zoom loads and drops chunks)
 
@@ -62,6 +71,7 @@
       const offsets = new Map(); // card el -> current eased {x, y}, only kept while live/non-zero
       let hoverCard = null; // the single card currently under the pointer — the field's center, or null when off every card
       let pressed = false; // a pointer button is currently held down somewhere over the canvas
+      let pressStartT = 0; // rAF timestamp the current press began — how long it's been held, uncapped, comes from this
 
       ctx.interval(() => {
         cards = ctx.archive.getCards();
@@ -90,7 +100,10 @@
       });
       ctx.on(canvasWrap, "pointerleave", () => setHover(null));
 
-      ctx.on(canvasEl, "pointerdown", () => { pressed = true; });
+      ctx.on(canvasEl, "pointerdown", () => {
+        pressed = true;
+        pressStartT = performance.now();
+      });
       function release() { pressed = false; }
       ctx.on(canvasEl, "pointerup", release);
       ctx.on(canvasEl, "pointercancel", release);
@@ -103,17 +116,26 @@
         e.preventDefault();
       }, true);
 
-      ctx.loop(() => {
+      ctx.loop((t) => {
         const center = hoverCard ? cardCenter(hoverCard) : null;
 
-        // No ramp-up: holding down on the center amplifies the field
-        // to its stronger, wider-reaching state on the very next
-        // frame, and it drops back just as instantly on release — only
-        // each individual card's own eased approach (below) is what
-        // keeps the motion smooth.
+        // No ramp-up: holding down on the center amplifies the field to
+        // its stronger, wider-reaching state on the very next frame,
+        // and from there it keeps climbing continuously for as long as
+        // the press lasts — no cap, no timeout, it only stops climbing
+        // when the press actually ends (see HOLD_GROWTH_* above) — then
+        // drops back to the ambient hover strength just as instantly on
+        // release. Only each individual card's own eased approach
+        // (below) is what keeps the motion smooth.
         const boosted = pressed && hoverCard;
-        const radius = boosted ? RADIUS_PRESSED : RADIUS;
-        const maxPull = boosted ? MAX_PULL_PRESSED : MAX_PULL;
+        let radius = RADIUS;
+        let maxPull = MAX_PULL;
+        if (boosted) {
+          const heldSeconds = Math.max(0, (t - pressStartT) / 1000);
+          const grow = Math.sqrt(heldSeconds);
+          radius = RADIUS_PRESSED + HOLD_GROWTH_RADIUS * grow;
+          maxPull = MAX_PULL_PRESSED + HOLD_GROWTH_PULL * grow;
+        }
 
         cards.forEach((card) => {
           if (card === hoverCard) return; // the center holds still — never eased, never offset

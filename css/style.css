@@ -134,32 +134,34 @@ button {
 
 /* Sized larger than the 52x52 box via an absolutely positioned
    pseudo-element, so it can breathe without changing the box's own
-   dimensions (no layout shift). No longer shown on hover (hover is
-   just the wiggle below) — kept only as the active-mode indicator, so
-   the currently-engaged symbol/mode stays legible without a hover. */
+   dimensions (no layout shift). Blurred so it reads as a soft, diffuse
+   glow rather than a hard-edged colored circle; shown on hover/focus
+   only (see below), not tied to the active-mode state. */
 .nav-symbol::before {
   content: "";
   position: absolute;
   inset: -12px;
   border-radius: 50%;
   background: var(--yellow-hover);
+  filter: blur(7px);
   opacity: 0;
   transform: scale(0.85);
   transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
 }
 
-/* Active mode indicator — the symbol grows to its full original size
-   (box/hit-area dimensions never shift; transform scales from the
+/* Active mode indicator — the symbol grows to its full original size;
+   box/hit-area dimensions never shift, and transform scales from the
    img's own center, which the flex-centered .nav-symbol box already
-   keeps aligned), plus a soft yellow glow behind it via the ::before
-   above, so the active state reads as gently illuminated rather than
-   only larger. */
+   keeps aligned. */
 .nav-symbol.active img {
   --nav-scale: 1;
 }
 
-.nav-symbol.active::before {
+/* The soft glow itself is a hover/focus cue only, independent of
+   whether the symbol's mode is active. */
+.nav-symbol:hover::before,
+.nav-symbol:focus-visible::before {
   opacity: 1;
   transform: scale(1);
 }
@@ -360,13 +362,33 @@ button {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  box-shadow: 0 0 10px 3px rgba(255, 204, 0, 0.85), inset 0 0 9px 2px rgba(255, 204, 0, 0.75);
-  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  transition: opacity 0.2s ease;
+}
+
+/* No yellow at all in the default state — the glow only appears on
+   hover (below), via a blurred pseudo-element behind the ✕ glyph
+   rather than a box-shadow, so it reads as a soft diffuse haze
+   instead of a defined circle or solid fill; the glyph itself is
+   never blurred since the filter only applies to this ::before. */
+.isolation-close::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: rgba(255, 204, 0, 0.55);
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .isolation-close:hover {
   opacity: 1;
-  box-shadow: 0 0 12px 4px rgba(255, 204, 0, 1), inset 0 0 10px 3px rgba(255, 204, 0, 0.9);
+}
+
+.isolation-close:hover::before {
+  opacity: 1;
 }
 
 .isolation-trail {
@@ -469,8 +491,8 @@ button {
   left: 24px;
   bottom: 24px;
   z-index: 160;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -481,8 +503,8 @@ button {
 
 .info-btn-icon {
   display: block;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   opacity: 0.7; /* default state only — hover/focus below restore full opacity */
 }
 
@@ -523,6 +545,10 @@ button {
   font-size: 11.5px;
   line-height: 1.65;
   color: #2f2965;
+}
+
+.info-panel p:first-of-type {
+  margin-top: 20px; /* a bit more breathing room below info-panel-close so it doesn't feel cramped against the first line — first-of-type since info-panel-close (a button, not a p) is the actual first child */
 }
 
 .info-panel p:last-child {

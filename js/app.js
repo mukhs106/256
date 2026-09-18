@@ -300,16 +300,36 @@
     if (imgs.length) {
       const { cols, actualColWidth } = columnsFor(CHUNK);
       const colHeights = new Array(cols).fill(0);
+      // Counts consecutive discards per column, purely to bound the
+      // retry below — reset the moment that column successfully places
+      // something.
+      const colRetries = new Array(cols).fill(0);
+      const MAX_COL_RETRIES = 4; // a handful of extra tries at a smaller image before accepting the loss, so one hard-to-fill column can't hog the whole chunk's placement budget
       let guard = 0;
       while (Math.min(...colHeights) < CHUNK && guard < imgs.length * 6) {
         for (const img of shuffledCopy(imgs)) {
           if (Math.min(...colHeights) >= CHUNK) break;
+          const before = colHeights.slice();
           const { el: cardEl, col } = placeImage(el, img, CHUNK, cols, actualColWidth, colHeights);
           if (colHeights[col] > CHUNK) {
             cardEl.remove();
+            if (colRetries[col] < MAX_COL_RETRIES) {
+              // Undo the attempt (rather than leaving colHeights[col] at
+              // this discarded card's overflowing height) so the column
+              // stays eligible as "shortest" and gets another candidate
+              // — usually a smaller one — instead of being abandoned
+              // with whatever leftover space happened to be there,
+              // which is what was producing occasional oversized empty
+              // gaps at a column's tail end. Bounded so a column with
+              // less room left than any remaining image can't just keep
+              // consuming every attempt for the rest of the chunk.
+              colHeights[col] = before[col];
+              colRetries[col]++;
+            }
           } else {
             cardEl.style.left = (parseFloat(cardEl.style.left) + originX) + "px";
             cardEl.style.top = (parseFloat(cardEl.style.top) + originY) + "px";
+            colRetries[col] = 0;
           }
           guard++;
         }
