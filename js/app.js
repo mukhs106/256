@@ -5,7 +5,7 @@
 ------------------------------------------------------------------- */
 
 (function () {
-  const { images, symbolLabels } = window.APP_DATA;
+  const { images } = window.APP_DATA;
 
   const state = {
     collectionId: "all",
@@ -60,36 +60,6 @@
       probe.onerror = resolve; // keep the provisional square box
       probe.src = imgUrl(img);
     })));
-  }
-
-  // ---------- icon nav (category symbols) ----------
-  // Purely a label reveal for now — the symbols aren't wired to
-  // filtering yet, so this just pairs each static nav-symbol with its
-  // name from data.js, in order.
-
-  function renderSymbolLabels() {
-    document.querySelectorAll(".nav-symbol").forEach((sym, i) => {
-      const label = sym.querySelector(".nav-symbol-label");
-      if (!label) return;
-      label.textContent = symbolLabels[i] || "";
-      const clamp = () => clampSymbolLabel(sym, label);
-      sym.addEventListener("mouseenter", clamp);
-      sym.addEventListener("focus", clamp);
-    });
-  }
-
-  // Long labels centered under a symbol near the left/right edge would
-  // otherwise get clipped by .main's overflow:hidden; nudge them inward
-  // via the --label-shift custom property (see style.css) instead.
-  function clampSymbolLabel(sym, label) {
-    label.style.setProperty("--label-shift", "0px");
-    const mainRect = document.querySelector(".main").getBoundingClientRect();
-    const labelRect = label.getBoundingClientRect();
-    const pad = 8;
-    let shift = 0;
-    if (labelRect.left < mainRect.left + pad) shift = (mainRect.left + pad) - labelRect.left;
-    else if (labelRect.right > mainRect.right - pad) shift = (mainRect.right - pad) - labelRect.right;
-    if (shift) label.style.setProperty("--label-shift", shift + "px");
   }
 
   // Not called from anywhere yet (no UI sets a collection id besides
@@ -161,15 +131,12 @@
     frame.appendChild(photo);
     el.appendChild(frame);
 
-    // Primary photos get one dot before the name, secondary get two.
-    const dots = img.type === "primary" ? "●" : "●●";
+    // Every image gets the same single dot before its name.
     const caption = document.createElement("div");
     caption.className = "photo-caption";
-    caption.innerHTML = `<span class="photo-dots">${dots}</span><span class="photo-name">${img.code}</span>`;
+    caption.innerHTML = `<span class="photo-dots">●</span><span class="photo-name">${img.code}</span>`;
     el.appendChild(caption);
 
-    el.addEventListener("mouseenter", () => showMeta(img, frame));
-    el.addEventListener("mouseleave", hideMeta);
     el.addEventListener("click", () => openIsolation(img));
     return el;
   }
@@ -233,7 +200,6 @@
     if (Math.random() < 0.05) gap = -(5 + Math.random() * 18); // rare, slight overlap
     const top = Math.max(0, colHeights[col] + gap);
 
-    const rotation = (Math.random() * 14 - 7).toFixed(1);
     const z = Math.round(10 + Math.random() * 40 + (img.sizeBucket === "large" ? 20 : 0));
 
     const el = makeCard(img);
@@ -241,7 +207,7 @@
     el.style.left = left + "px";
     el.style.top = top + "px";
     el.style.width = w + "px";
-    el.style.transform = `rotate(${rotation}deg)`;
+    el.style.transform = "rotate(0)";
     el.style.zIndex = z;
     el.querySelector(".photo-frame").style.height = h + "px";
     container.appendChild(el);
@@ -315,85 +281,6 @@
     // scrolling takes over from there via extendCanvasIfNeeded.
     let guard = 0;
     while (guard++ < 50 && layout.bottom < canvasWrapEl.clientHeight * (1 + INITIAL_FILL_SCREENS) && generateRegion()) { /* keep filling */ }
-  }
-
-  // ---------- metadata panel (a small floating note beside the selected image) ----------
-  // image name + type stay on the `img` object (used for captions and dot
-  // count elsewhere) but are intentionally not surfaced in this panel.
-  // kept/connection/returned are the primary, always-labeled fields;
-  // when/where/source are secondary and only appear when filled in, so
-  // they never compete with the primary three.
-
-  function setMetaPanel(img) {
-    const caption = document.getElementById("meta-caption");
-    caption.textContent = img ? img.caption : "";
-    caption.hidden = !(img && img.caption);
-
-    document.getElementById("meta-kept").textContent = img ? img.keptBecause : "";
-    document.getElementById("meta-connection").textContent = img ? img.connection : "";
-    document.getElementById("meta-returned").textContent = img ? img.returnedTo : "";
-
-    const secondary = [
-      ["meta-when-row", img && img.dateLabel, "meta-when", img && img.dateLabel],
-      ["meta-where-row", img && img.location, "meta-where", img && img.location],
-      ["meta-source-row", img && img.source, "meta-source", img && img.source],
-    ];
-    let anySecondary = false;
-    secondary.forEach(([rowId, has, valId, val]) => {
-      document.getElementById(rowId).hidden = !has;
-      document.getElementById(valId).textContent = val || "";
-      if (has) anySecondary = true;
-    });
-    document.getElementById("meta-secondary").hidden = !anySecondary;
-  }
-
-  // Places the floating panel just beside `targetEl` (a photo frame or the
-  // isolation stage image), clamped so it never runs off the viewport.
-  function positionMetaPanel(targetEl) {
-    const panel = document.getElementById("meta-panel");
-    const rect = targetEl.getBoundingClientRect();
-    const margin = 14;
-
-    panel.style.visibility = "hidden";
-    panel.classList.add("visible");
-    const pw = panel.offsetWidth;
-    const ph = panel.offsetHeight;
-
-    let left = rect.right + margin;
-    if (left + pw + margin > window.innerWidth) {
-      left = rect.left - pw - margin;
-    }
-    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
-
-    let top = rect.top;
-    top = Math.max(margin, Math.min(top, window.innerHeight - ph - margin));
-
-    panel.style.left = left + "px";
-    panel.style.top = top + "px";
-    panel.style.visibility = "";
-  }
-
-  // Does the actual work of showing the panel next to `targetEl`. Used
-  // directly by the isolation view (which manages its own open/closed
-  // state) and, guarded, by card hover below.
-  function applyMetaPanel(img, targetEl) {
-    setMetaPanel(img);
-    if (targetEl) positionMetaPanel(targetEl);
-    document.getElementById("meta-panel").classList.add("visible");
-  }
-
-  function hideMetaPanel() {
-    document.getElementById("meta-panel").classList.remove("visible");
-  }
-
-  function showMeta(img, targetEl) {
-    if (!document.getElementById("isolation").hidden) return;
-    applyMetaPanel(img, targetEl);
-  }
-
-  function hideMeta() {
-    if (!document.getElementById("isolation").hidden) return;
-    hideMetaPanel();
   }
 
   // ---------- isolation view ----------
@@ -533,9 +420,6 @@
     stage.style.width = dispW + "px";
     stage.style.height = dispH + "px";
 
-    // The isolation view has no metadata dock beside it.
-    setMetaPanel(null);
-
     renderTrail();
     renderPaths(img);
   }
@@ -553,7 +437,6 @@
     document.body.classList.remove("isolating");
     state.trail = [];
     state.isolatedId = null;
-    hideMetaPanel();
   }
 
   // ---------- info panel ----------
@@ -583,8 +466,6 @@
     cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
     openIsolation,
     closeIsolation,
-    showMeta,
-    hideMeta,
     setAutoExtend(on) { autoExtendEnabled = !!on; },
     // Lets a mode change which images get suggested when the viewer
     // opens a photo (the isolation view's flanking "paths" + trail —
@@ -608,7 +489,6 @@
     // resetView() below.
     rerender() {
       renderCanvas();
-      hideMeta();
     },
     // The reset hook ModeManager calls on every mode switch, before the
     // next mode (if any) enters.
@@ -633,8 +513,6 @@
     canvasWrapEl = document.getElementById("canvas-wrap");
 
     renderCanvas();
-    renderSymbolLabels();
-    hideMetaPanel();
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
@@ -663,7 +541,7 @@
       if (e.key === "Escape" && !document.getElementById("info-panel").hidden) closeInfoPanel();
     });
 
-    window.addEventListener("resize", debounce(() => { renderCanvas(); hideMeta(); }, 200));
+    window.addEventListener("resize", debounce(() => { renderCanvas(); }, 200));
   }
 
   document.addEventListener("DOMContentLoaded", init);

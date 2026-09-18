@@ -86,20 +86,6 @@
     { id: "what-else", name: "WHAT ELSE COULD IT BE? [POSSIBILITY]", cover: "IMG_19.jpeg" },
   ];
 
-  // ------------------------------------------------------------------
-  // EDIT ME — the label revealed under each of the six top symbols on
-  // hover, in order (symbols/1.svg..6.svg). Purely a label for now —
-  // not wired to filtering or the COLLECTIONS list above.
-  // ------------------------------------------------------------------
-  const SYMBOL_LABELS = [
-    "JUST SEE WHAT HAPPENS",
-    "MAKE IT INTO SOMETHING ELSE",
-    "NO POINT",
-    "PLAY WITH THE RULES",
-    "LOSE TRACK OF TIME",
-    "WHAT ELSE COULD IT BE?",
-  ];
-
   // EDIT ME — cover image for the main "library" (all photos) view.
   const LIBRARY_COVER = "IMG_01.jpeg";
 
@@ -107,7 +93,7 @@
   // EDIT ME — per-photo metadata, keyed by filename.
   // Every field is a plain string ("" if not filled in yet).
   //   caption      — a line about the photo
-  //   type         — "primary" or "secondary" (one dot vs two on the card)
+  //   type         — "primary" or "secondary" (not currently shown on the card)
   //   source       — where it came from (e.g. "iPhone 13", "screenshot")
   //   location     — where/when it was taken (e.g. "kitchen counter")
   //   date         — e.g. "Jun 3, 2024" (shown as typed, also used to
@@ -1281,5 +1267,5 @@
     };
   });
 
-  window.APP_DATA = { images, collections: COLLECTIONS, libraryCover: LIBRARY_COVER, symbolLabels: SYMBOL_LABELS };
+  window.APP_DATA = { images, collections: COLLECTIONS, libraryCover: LIBRARY_COVER };
 })();

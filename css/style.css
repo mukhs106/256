@@ -123,9 +123,11 @@ button {
   z-index: 1;
 }
 
-/* Hover halo — sized larger than the 52x52 box via an absolutely
-   positioned pseudo-element, so the glow can breathe without ever
-   changing the box's own dimensions (no layout shift). */
+/* Active mode indicator — a soft halo behind the symbol whose mode is
+   currently on, via an absolutely positioned pseudo-element so the glow
+   can breathe without ever changing the box's own dimensions (no layout
+   shift). Symbols have no hover/focus treatment — they stay visually
+   plain until clicked. */
 .nav-symbol::before {
   content: "";
   position: absolute;
@@ -133,63 +135,12 @@ button {
   border-radius: 50%;
   background: var(--yellow-hover);
   opacity: 0;
-  transform: scale(0.85);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: scale(1);
   pointer-events: none;
 }
 
-/* Active mode indicator — same halo as hover, just left showing at
-   lower strength so the current symbol/mode stays legible without a
-   hover. Declared before the hover rule so hovering the active symbol
-   still reads as a full, normal hover on top of it. */
 .nav-symbol.active::before {
   opacity: 0.55;
-  transform: scale(1);
-}
-
-.nav-symbol:hover::before,
-.nav-symbol:focus-visible::before {
-  opacity: 1;
-  transform: scale(1);
-}
-
-@keyframes symbolWiggle {
-  0% { transform: rotate(0deg); }
-  22% { transform: rotate(-9deg); }
-  48% { transform: rotate(8deg); }
-  72% { transform: rotate(-4deg); }
-  100% { transform: rotate(0deg); }
-}
-
-.nav-symbol:hover img,
-.nav-symbol:focus-visible img {
-  animation: symbolWiggle 0.45s ease-in-out 1;
-}
-
-/* The category name — a mysterious invitation, not a persistent label.
-   Absolutely positioned so revealing it never shifts the symbol row or
-   anything below it. */
-.nav-symbol-label {
-  --label-shift: 0px; /* nudged by JS so long labels near an edge don't get clipped by .main's overflow:hidden */
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translate(calc(-50% + var(--label-shift)), -3px);
-  white-space: nowrap;
-  font-size: 8.5px;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  pointer-events: none;
-}
-
-.nav-symbol:hover .nav-symbol-label,
-.nav-symbol:focus-visible .nav-symbol-label {
-  opacity: 1;
-  transform: translate(calc(-50% + var(--label-shift)), 0);
 }
 
 .brand {
@@ -308,145 +259,6 @@ button {
 }
 
 .photo-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---------------- metadata panel ----------------
-   A small floating note beside whichever image is selected — not a
-   dashboard. JS sets left/top per image (positionMetaPanel in app.js);
-   this just handles its own look and its show/hide transition. */
-
-.meta-panel {
-  position: fixed;
-  left: 0;
-  top: 0;
-  max-width: min(230px, calc(100vw - 28px));
-  background: rgba(255, 255, 255, 0.96);
-  color: var(--ink);
-  padding: 12px 14px;
-  font-size: 11px;
-  z-index: 150;
-  pointer-events: none;
-  border: 1px solid var(--line);
-  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.22);
-  opacity: 0;
-  transform: translateY(3px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.meta-panel.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* The isolation view has no metadata dock beside it. */
-body.isolating .meta-panel {
-  display: none;
-}
-
-.meta-caption {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 11px;
-  line-height: 1.3;
-  color: var(--ink-soft);
-  margin-bottom: 8px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* While isolated, the metadata dock's text should match the site's
-   standard body typography rather than the decorative display face. */
-body.isolating .meta-caption {
-  font-family: var(--font-body);
-}
-
-.meta-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.meta-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.meta-key {
-  font-family: var(--font-body);
-  font-size: 8.5px;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.meta-val {
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  font-weight: var(--weight-medium);
-  color: var(--ink);
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* "returned to" is still a primary field (always labeled) but quieter
-   than kept-because/connection, which carry the most emphasis. */
-.meta-field-quiet .meta-val {
-  font-size: 11px;
-  font-weight: var(--weight-regular);
-  color: var(--ink-soft);
-}
-
-/* Secondary: when / where / source — quieter, and only present at all
-   when at least one of them has content (toggled via [hidden] in JS). */
-.meta-secondary {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 9px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-
-.meta-secondary[hidden] {
-  display: none;
-}
-
-.meta-field-sm {
-  display: flex;
-  gap: 5px;
-  line-height: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.meta-field-sm[hidden] {
-  display: none;
-}
-
-.meta-key-sm {
-  flex: 0 0 auto;
-  font-family: var(--font-body);
-  font-size: 8px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.meta-val-sm {
-  flex: 1 1 auto;
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
 }
