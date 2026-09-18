@@ -349,18 +349,18 @@ button {
   background-color: transparent;
   border: none;
   color: var(--ink);
-  font-size: 18px;
+  font-size: 20px;
   opacity: 0.6;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  box-shadow: 0 0 8px 1px rgba(255, 204, 0, 0.4);
+  box-shadow: 0 0 10px 3px rgba(255, 204, 0, 0.85), inset 0 0 9px 2px rgba(255, 204, 0, 0.75);
   transition: opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .isolation-close:hover {
   opacity: 1;
-  box-shadow: 0 0 10px 2px rgba(255, 204, 0, 0.6);
+  box-shadow: 0 0 12px 4px rgba(255, 204, 0, 1), inset 0 0 10px 3px rgba(255, 204, 0, 0.9);
 }
 
 .isolation-trail {
@@ -450,7 +450,7 @@ button {
   margin-top: 20px;
   font-family: var(--font-body);
   font-size: 12px;
-  color: var(--ink);
+  color: #2f2965;
   text-align: center;
 }
 
@@ -477,13 +477,22 @@ button {
   display: block;
   width: 34px;
   height: 34px;
+  opacity: 0.7; /* default state only — hover/focus below restore full opacity */
 }
 
 /* Same treatment as the category symbols: a small wiggle, nothing
    behind it — no glow ring, halo, or background change on hover. */
 .info-btn:hover .info-btn-icon,
 .info-btn:focus-visible .info-btn-icon {
+  opacity: 1;
   animation: symbolWiggle 0.45s ease-in-out 1;
+}
+
+/* Panel open (button "clicked") — stays fully opaque even once the
+   pointer is no longer hovering it, matching the hover/focus opacity
+   above rather than falling back to the dimmer default. */
+.info-btn[aria-expanded="true"] .info-btn-icon {
+  opacity: 1;
 }
 
 .info-panel {
@@ -493,8 +502,8 @@ button {
   z-index: 160;
   width: min(260px, calc(100vw - 48px));
   background: var(--paper);
-  border: 1px solid var(--line);
-  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.3);
+  border: 1px solid #2f2965;
+  box-shadow: 0 16px 40px -14px rgba(47, 41, 101, 0.3);
   padding: 18px 20px;
 }
 
@@ -507,7 +516,7 @@ button {
   font-family: var(--font-body);
   font-size: 11.5px;
   line-height: 1.65;
-  color: var(--ink-soft);
+  color: #2f2965;
 }
 
 .info-panel p:last-child {
@@ -545,17 +554,22 @@ button {
   align-items: stretch;
   background: var(--paper);
   border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden; /* keeps each button's hover fill within the rounded pill */
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
 }
 
 .zoom-btn {
   width: 32px;
   height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -564,7 +578,7 @@ button {
 }
 
 .zoom-btn:hover {
-  box-shadow: inset 0 0 12px 1px var(--yellow-hover);
+  background: var(--yellow);
 }
 
 /* ---------------- symbol effects (instant triggers) ----------------
