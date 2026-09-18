@@ -1,10 +1,13 @@
 /* ------------------------------------------------------------------
-   effects/cursor-trail.js
-   symbols/2.svg — an instant trigger, not a mode: clicking it releases
-   small copies of the page's own nav symbols (symbols/1.svg..6.svg)
-   around the pointer for about 8 seconds, then stops spawning new ones
-   on its own. See js/modes-config.js (SYMBOL_FX_CONFIG) for how a
-   symbol gets wired to this.
+   modes/cursor-trail.js
+   "CURSOR TRAIL" (symbols/2.svg) — releases small copies of the page's
+   own nav symbols (symbols/1.svg..6.svg) around the pointer for as
+   long as this symbol stays selected. Registered as a persistent mode
+   (rather than the fixed-duration one-shot effect this used to be) so
+   it never stops itself on a timer — only switching to a different
+   symbol/mode, or a page reset, turns it off, exactly like RAIN/
+   DUPLICATES/MAGNET/DRIFT already behave. See js/modes-config.js
+   (MODE_CONFIG) for how a symbol gets wired to this.
 
    Pieces are sprinkled around the cursor rather than spawned exactly
    on it, and fall mostly straight down (a small, mostly-cosmetic
@@ -18,8 +21,12 @@
    that part of the page. STUCK_CAP bounds how many of those can exist
    at once (oldest is evicted first) so a long session can't quietly
    grow the DOM without limit; every piece — stuck or not — is on its
-   own timer regardless, so nothing here needs the trail to still be
-   "active" to eventually clean itself up.
+   own timer regardless, so nothing here needs the mode to still be
+   active for a piece to eventually clean itself up. `stuck` and the
+   spawn helpers live in this file's own outer closure (not inside
+   enter()) so that cap keeps counting correctly across turning the
+   mode off and back on, the same as it did across repeated triggers
+   of the old one-shot effect.
 
    Kept deliberately light for performance: pieces are small <img>s
    referencing the same tiny SVG files already used in the header nav
@@ -29,23 +36,16 @@
    event, and capped both per burst and for how many can be "stuck" at
    once.
 
-   All state (whether the trail is running, the pointermove listener,
-   the auto-stop timer, the last spawn point, the stuck-piece queue)
-   lives in this file's own closure rather than on ArchiveAPI/
-   ModeManager, since the trail never touches the archive — pieces are
-   appended straight to <body> as fixed-position elements. Re-triggering
-   always calls stop() first, so clicking the symbol again while a
-   trail is already running restarts spawning cleanly instead of
-   layering a second pointermove listener on top of the first (already-
-   stuck pieces are left alone either way, since they're not part of
-   what stop() tears down).
+   Unlike the old effect, entering a mode doesn't hand this the
+   triggering click's coordinates, so there's no activation burst at
+   the click point anymore — the trail simply starts from the first
+   pointermove after the symbol is selected, the same fallback the
+   previous version already used for a keyboard-triggered activation.
 ------------------------------------------------------------------- */
 (function () {
   const SYMBOL_COUNT = 6; // symbols/1.svg..6.svg
-  const DURATION_MS = 8000; // how long new pieces keep spawning after a trigger
   const SPACING_PX = 46; // target distance between consecutively spawned pieces along the path — sparser than a dot trail, for a "light sprinkle" and lighter DOM churn
   const MAX_STEPS_PER_EVENT = 3; // caps interpolation on a very large jump between two pointermove events
-  const BURST_COUNT = 5; // pieces spawned immediately around the triggering click
 
   const SIZE_PX = [13, 20]; // px, per-piece size — small, per the design ask
   const SIDEWAYS_PX = [10, 26]; // px, small horizontal drift while falling (signed)
@@ -60,9 +60,7 @@
   const STICK_LIFETIME_MS = [12000, 18000]; // a stuck piece still eventually cleans itself up
   const STUCK_CAP = 30; // bounds how many stuck traces can exist at once (oldest evicted first)
 
-  let active = false;
   let lastX = null, lastY = null;
-  let stopTimer = null;
   const stuck = []; // FIFO of { el, timer }
 
   function rand([lo, hi]) { return lo + Math.random() * (hi - lo); }
@@ -122,14 +120,6 @@
     }
   }
 
-  function spawnBurst(x, y) {
-    for (let i = 0; i < BURST_COUNT; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const r = Math.random() * 14;
-      spawnPiece(x + Math.cos(angle) * r, y + Math.sin(angle) * r * 0.5); // flattened — a sprinkle around the point, not a full radial burst
-    }
-  }
-
   function onPointerMove(e) {
     if (lastX === null) {
       lastX = e.clientX; lastY = e.clientY;
@@ -149,30 +139,19 @@
     lastY = e.clientY;
   }
 
-  function stop() {
-    if (!active) return;
-    active = false;
-    document.removeEventListener("pointermove", onPointerMove);
-    if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
-    lastX = lastY = null;
-  }
+  ModeManager.register("cursorTrail", {
+    label: "CURSOR TRAIL",
 
-  // `e`, when given, is the click/keydown event that triggered this —
-  // used only to place the activation burst; a keyboard activation
-  // (no clientX/Y) just skips the burst and starts from the first
-  // pointermove instead.
-  function triggerCursorTrail(archive, e) {
-    stop();
-    active = true;
-    if (e && typeof e.clientX === "number" && typeof e.clientY === "number") {
-      spawnBurst(e.clientX, e.clientY);
-      lastX = e.clientX;
-      lastY = e.clientY;
-    }
-    document.addEventListener("pointermove", onPointerMove);
-    stopTimer = setTimeout(stop, DURATION_MS);
-  }
+    enter(ctx) {
+      lastX = lastY = null; // first pointermove after selecting the symbol spawns immediately, same as a keyboard-triggered activation used to
+      ctx.on(document, "pointermove", onPointerMove);
+    },
 
-  window.SymbolFX = window.SymbolFX || {};
-  window.SymbolFX.cursorTrail = triggerCursorTrail;
+    exit(ctx) {
+      // ctx's own auto-cleanup removes the pointermove listener above.
+      // Pieces already falling or stuck are left exactly alone — each
+      // is on its own independent timer (see the file-header note) —
+      // so switching away doesn't yank a trace off the page mid-fade.
+    },
+  });
 })();

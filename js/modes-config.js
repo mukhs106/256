@@ -25,7 +25,7 @@
 ------------------------------------------------------------------- */
 window.MODE_CONFIG = {
   symbol_1: null, // instant effect instead — see SYMBOL_FX_CONFIG
-  symbol_2: null, // instant effect instead — see SYMBOL_FX_CONFIG
+  symbol_2: "cursorTrail", // stays active for as long as the symbol is selected — see js/modes/cursor-trail.js
   symbol_3: "rain",
   symbol_4: "duplicates",
   symbol_5: "magnet",
@@ -34,7 +34,7 @@ window.MODE_CONFIG = {
 
 window.SYMBOL_FX_CONFIG = {
   symbol_1: "earthquake",
-  symbol_2: "cursorTrail",
+  symbol_2: null, // persistent mode instead — see MODE_CONFIG
   symbol_3: null,
   symbol_4: null,
   symbol_5: null,
