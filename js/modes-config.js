@@ -27,9 +27,9 @@ window.MODE_CONFIG = {
   symbol_1: null, // instant effect instead — see SYMBOL_FX_CONFIG
   symbol_2: null, // instant effect instead — see SYMBOL_FX_CONFIG
   symbol_3: "rain",
-  symbol_4: "play-with-the-rules",
-  symbol_5: "lose-track-of-time",
-  symbol_6: "what-else-could-it-be",
+  symbol_4: "duplicates",
+  symbol_5: "magnet",
+  symbol_6: "drift",
 };
 
 window.SYMBOL_FX_CONFIG = {
