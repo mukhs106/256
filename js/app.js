@@ -556,6 +556,22 @@
     hideMetaPanel();
   }
 
+  // ---------- return to home (title / subtitle click) ----------
+  // Restores the original homepage state: no active mode/symbol, no
+  // collection filter, isolation/trail cleared, meta panel hidden, and
+  // a freshly laid-out archive scrolled back to the top — without a
+  // browser reload.
+
+  function resetToHome() {
+    if (!document.getElementById("isolation").hidden) closeIsolation();
+    if (!document.getElementById("info-panel").hidden) closeInfoPanel();
+    state.collectionId = "all";
+    window.ModeManager.activate(null); // tears down any active mode + resets the archive view
+    setActiveSymbolUI(-1);
+    renderCanvas(); // guarantees the original layout/position even if no mode was active to reset
+    hideMetaPanel();
+  }
+
   // ---------- info panel ----------
 
   function openInfoPanel() {
@@ -638,6 +654,15 @@
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
+
+    const brandHome = document.getElementById("brand-home");
+    brandHome.addEventListener("click", resetToHome);
+    brandHome.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        resetToHome();
+      }
+    });
 
     canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
 

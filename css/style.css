@@ -195,7 +195,19 @@ button {
 .brand {
   text-align: center;
   flex: 0 0 auto;
-  pointer-events: none;
+  /* Doubles as the home/reset control — opts back into pointer events
+     (the rest of the toolbar stays click-through) so the title and
+     subtitle are both clickable without changing their look. */
+  pointer-events: auto;
+  cursor: pointer;
+  outline: none;
+}
+
+.brand:hover .brand-name,
+.brand:hover .brand-sub,
+.brand:focus-visible .brand-name,
+.brand:focus-visible .brand-sub {
+  opacity: 0.7;
 }
 
 .brand-name {
@@ -205,6 +217,7 @@ button {
   letter-spacing: -0.08em;
   line-height: 1.1;
   color: #2F2965;
+  transition: opacity 0.15s ease;
 }
 
 .brand-sub {
@@ -213,6 +226,7 @@ button {
   letter-spacing: -0.03em;
   color: #2F2965;
   margin-top: 2px;
+  transition: opacity 0.15s ease;
 }
 
 /* ---------------- main ---------------- */
@@ -238,7 +252,21 @@ button {
   z-index: 80;
   padding: 22px 32px 0;
   height: 132px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 60%, rgba(255, 255, 255, 0) 100%);
+  /* Eased, multi-stop alpha fade rather than a single linear ramp — a
+     linear fade over a short span reads as a hard edge against the
+     busier image archive underneath, so this holds solid longer and
+     then tapers off gradually across the rest of the header's height. */
+  background: linear-gradient(
+    to bottom,
+    var(--paper) 0%,
+    var(--paper) 32%,
+    rgba(255, 255, 255, 0.92) 46%,
+    rgba(255, 255, 255, 0.72) 58%,
+    rgba(255, 255, 255, 0.48) 70%,
+    rgba(255, 255, 255, 0.26) 82%,
+    rgba(255, 255, 255, 0.1) 92%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
 }
 
@@ -247,6 +275,13 @@ button {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 108px 20px 60px;
+  /* Contains the archive's own stacking (including hovered/dragged
+     cards, which intentionally use very high z-index values to stack
+     above one another) inside its own stacking context, so no card can
+     ever paint above the toolbar/header regardless of its internal
+     z-index — the toolbar stays the topmost visual layer without
+     capping what cards can do among themselves. */
+  isolation: isolate;
 }
 
 .canvas {

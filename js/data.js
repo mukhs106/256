@@ -115,9 +115,21 @@
   //   keptBecause  — why it's still around
   //   returnedTo   — how often you've come back to it (e.g. "3 times")
   //   connection   — what it reminds you of / what it's connected to
+  //   tags         — 2-4 entries from the fixed vocabulary below; an
+  //                  underlying layer of visual/conceptual connections
+  //                  between photos and across collections (not a
+  //                  replacement for the collections system). Only use
+  //                  tags already in TAG_VOCABULARY — never invent a
+  //                  new one here.
   //   collections  — array of collection ids (from COLLECTIONS above)
   //                  this photo belongs to; [] if none
   // ------------------------------------------------------------------
+  const TAG_VOCABULARY = [
+    "personal", "people", "food", "architecture", "nature", "typography",
+    "collage", "texture", "color", "shape", "negative-space", "nostalgia",
+    "surreal", "odd", "playful", "social-play", "experimentation",
+    "transformation", "possibility",
+  ];
   const METADATA = {
     "IMG_01.jpeg": {
       caption: "",
@@ -128,6 +140,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "food", "playful", "social-play"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_17.jpeg": {
@@ -139,6 +152,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "shape", "texture", "typography"],
       collections: ["just-see"],
     },
     "IMG_18.jpeg": {
@@ -150,6 +164,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "color", "experimentation"],
       collections: ["just-see", "lose-track"],
     },
     "IMG_02.jpeg": {
@@ -161,6 +176,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "color", "experimentation"],
       collections: ["just-see"],
     },
     "IMG_03.jpeg": {
@@ -172,6 +188,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "playful", "personal", "nostalgia"],
       collections: ["make-into", "lose-track"],
     },
     "IMG_04.jpeg": {
@@ -183,6 +200,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["surreal", "odd", "food", "possibility"],
       collections: ["no-point", "play-rules", "what-else"],
     },
     "IMG_05.jpeg": {
@@ -194,6 +212,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["surreal", "odd", "color", "texture"],
       collections: ["no-point"],
     },
     "IMG_06.jpeg": {
@@ -205,6 +224,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "nostalgia", "typography", "color"],
       collections: ["lose-track"],
     },
     "IMG_07.jpeg": {
@@ -216,6 +236,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["playful", "architecture", "negative-space", "possibility"],
       collections: ["just-see", "make-into", "no-point", "what-else"],
     },
     "IMG_08.jpeg": {
@@ -227,6 +248,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "people", "surreal", "possibility"],
       collections: ["make-into", "play-rules", "what-else"],
     },
     "IMG_09.jpeg": {
@@ -238,6 +260,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "surreal", "nature", "odd"],
       collections: ["just-see", "make-into"],
     },
     "IMG_10.jpeg": {
@@ -249,6 +272,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["food", "texture", "transformation", "odd"],
       collections: ["no-point", "what-else"],
     },
     "IMG_11.jpeg": {
@@ -260,6 +284,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["playful", "shape", "color", "negative-space"],
       collections: ["just-see"],
     },
     "IMG_12.jpeg": {
@@ -271,6 +296,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["playful", "collage", "nature", "people"],
       collections: ["just-see", "no-point"],
     },
     "IMG_13.jpeg": {
@@ -282,6 +308,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "playful", "social-play", "nostalgia"],
       collections: ["play-together"],
     },
     "IMG_14.jpeg": {
@@ -293,6 +320,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "playful", "social-play"],
       collections: ["play-together"],
     },
     "IMG_15.jpeg": {
@@ -304,6 +332,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["food", "transformation", "playful", "experimentation"],
       collections: ["just-see", "make-into", "play-rules"],
     },
     "IMG_16.jpeg": {
@@ -315,6 +344,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "color", "odd"],
       collections: ["no-point"],
     },
     "IMG_19.jpeg": {
@@ -326,6 +356,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["food", "surreal", "odd", "possibility"],
       collections: ["what-else"],
     },
     "IMG_20.jpeg": {
@@ -337,6 +368,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "color", "playful", "shape"],
       collections: ["no-point", "lose-track"],
     },
     "IMG_21.jpeg": {
@@ -348,6 +380,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "playful", "possibility"],
       collections: ["play-together"],
     },
     "IMG_22.jpeg": {
@@ -359,6 +392,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "playful", "possibility"],
       collections: ["lose-track"],
     },
     "IMG_23.jpeg": {
@@ -370,6 +404,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "nostalgia"],
       collections: ["lose-track"],
     },
     "IMG_24.jpeg": {
@@ -381,6 +416,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "social-play"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_25.jpeg": {
@@ -392,6 +428,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "color", "texture"],
       collections: ["lose-track"],
     },
     "IMG_26.jpeg": {
@@ -403,6 +440,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "people", "nostalgia", "texture"],
       collections: ["just-see", "make-into", "what-else"],
     },
     "IMG_27.jpeg": {
@@ -414,6 +452,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "nature", "negative-space", "odd"],
       collections: ["lose-track"],
     },
     "IMG_28.jpeg": {
@@ -425,6 +464,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "social-play", "playful", "personal"],
       collections: ["play-together"],
     },
     "IMG_29.jpeg": {
@@ -436,6 +476,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "color", "personal"],
       collections: ["lose-track"],
     },
     "IMG_30.jpeg": {
@@ -447,6 +488,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "surreal", "color", "experimentation"],
       collections: ["just-see", "play-rules"],
     },
     "IMG_31.jpeg": {
@@ -458,6 +500,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "nostalgia", "nature", "architecture"],
       collections: ["lose-track"],
     },
     "IMG_32.jpeg": {
@@ -469,6 +512,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "nostalgia", "social-play"],
       collections: ["play-together"],
     },
     "IMG_33.jpeg": {
@@ -480,6 +524,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "surreal", "shape", "experimentation"],
       collections: ["just-see", "no-point"],
     },
     "IMG_34.jpeg": {
@@ -491,6 +536,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "texture", "color", "shape"],
       collections: ["no-point"],
     },
     "IMG_35.jpeg": {
@@ -502,6 +548,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "texture", "experimentation", "transformation"],
       collections: ["just-see"],
     },
     "IMG_36.jpeg": {
@@ -513,6 +560,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "architecture", "nature"],
       collections: ["no-point"],
     },
     "IMG_37.jpeg": {
@@ -524,6 +572,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "people", "nostalgia"],
       collections: ["play-together"],
     },
     "IMG_38.jpeg": {
@@ -535,6 +584,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "texture", "experimentation"],
       collections: ["just-see"],
     },
     "IMG_39.jpeg": {
@@ -546,6 +596,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "surreal", "color", "transformation"],
       collections: ["no-point", "lose-track"],
     },
     "IMG_40.jpeg": {
@@ -557,6 +608,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "playful", "social-play"],
       collections: ["no-point", "lose-track", "play-together"],
     },
     "IMG_41.jpeg": {
@@ -568,6 +620,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "shape", "color", "surreal"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_42.jpeg": {
@@ -579,6 +632,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "playful", "surreal", "texture"],
       collections: ["play-together"],
     },
     "IMG_43.jpeg": {
@@ -590,6 +644,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "texture", "experimentation"],
       collections: ["just-see", "play-rules"],
     },
     "IMG_44.jpeg": {
@@ -601,6 +656,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "shape", "experimentation"],
       collections: ["just-see", "lose-track"],
     },
     "IMG_45.jpeg": {
@@ -612,6 +668,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "playful", "experimentation"],
       collections: ["play-together"],
     },
     "IMG_46.jpeg": {
@@ -623,6 +680,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "social-play", "nostalgia"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_47.jpeg": {
@@ -634,6 +692,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "social-play", "nostalgia"],
       collections: ["play-together"],
     },
     "IMG_48.jpeg": {
@@ -645,6 +704,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "people", "negative-space"],
       collections: ["make-into", "play-together"],
     },
     "IMG_49.jpeg": {
@@ -656,6 +716,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["surreal", "playful", "odd", "typography"],
       collections: ["play-together"],
     },
     "IMG_50.jpeg": {
@@ -667,6 +728,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["shape", "surreal", "odd", "playful"],
       collections: ["just-see", "make-into"],
     },
     "IMG_51.jpeg": {
@@ -678,6 +740,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "texture", "experimentation"],
       collections: ["just-see", "play-rules"],
     },
     "IMG_52.jpeg": {
@@ -689,6 +752,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "social-play"],
       collections: ["no-point", "play-together"],
     },
     "IMG_53.jpeg": {
@@ -700,6 +764,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "people", "transformation", "surreal"],
       collections: ["make-into", "play-together"],
     },
     "IMG_54.jpeg": {
@@ -711,6 +776,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "nostalgia", "playful"],
       collections: ["lose-track"],
     },
     "IMG_55.jpeg": {
@@ -722,6 +788,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "shape", "odd"],
       collections: ["no-point", "lose-track"],
     },
     "IMG_56.jpeg": {
@@ -733,6 +800,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "social-play", "playful"],
       collections: ["play-together"],
     },
     "IMG_57.jpeg": {
@@ -744,6 +812,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "texture", "experimentation"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_58.jpeg": {
@@ -755,6 +824,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "experimentation", "surreal"],
       collections: ["just-see", "what-else"],
     },
     "IMG_59.jpeg": {
@@ -766,6 +836,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "nature", "nostalgia"],
       collections: ["no-point"],
     },
     "IMG_60.jpeg": {
@@ -777,6 +848,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "color", "experimentation"],
       collections: ["just-see", "lose-track"],
     },
     "IMG_61.jpeg": {
@@ -788,6 +860,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["transformation", "experimentation", "shape"],
       collections: ["just-see", "play-rules", "what-else"],
     },
     "IMG_62.jpeg": {
@@ -799,6 +872,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "architecture", "personal"],
       collections: ["no-point", "play-together"],
     },
     "IMG_63.jpeg": {
@@ -810,6 +884,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "color", "playful"],
       collections: ["just-see", "play-rules"],
     },
     "IMG_64.jpeg": {
@@ -821,6 +896,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "people", "personal"],
       collections: [],
     },
     "IMG_65.jpeg": {
@@ -832,6 +908,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "texture", "surreal"],
       collections: ["no-point", "lose-track"],
     },
     "IMG_66.jpeg": {
@@ -843,6 +920,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["surreal", "transformation", "possibility"],
       collections: ["make-into", "play-rules"],
     },
     "IMG_67.jpeg": {
@@ -854,6 +932,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "texture", "playful"],
       collections: ["just-see", "lose-track"],
     },
     "IMG_68.jpeg": {
@@ -865,6 +944,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["collage", "typography", "nostalgia"],
       collections: ["play-together"],
     },
     "IMG_69.jpeg": {
@@ -876,6 +956,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["food", "people", "playful", "personal"],
       collections: ["just-see", "make-into", "play-rules"],
     },
     "IMG_70.jpeg": {
@@ -887,6 +968,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "playful", "color", "social-play"],
       collections: ["play-together"],
     },
     "IMG_71.jpeg": {
@@ -898,6 +980,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "people", "typography", "playful"],
       collections: ["play-together"],
     },
     "IMG_72.jpeg": {
@@ -909,6 +992,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["shape", "color", "playful"],
       collections: ["make-into"],
     },
     "IMG_73.jpeg": {
@@ -920,6 +1004,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "collage", "nostalgia", "people"],
       collections: ["no-point"],
     },
     "IMG_74.jpeg": {
@@ -931,6 +1016,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "nostalgia", "people"],
       collections: ["play-together"],
     },
     "IMG_75.jpeg": {
@@ -942,6 +1028,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["shape", "color", "social-play", "playful"],
       collections: ["play-rules", "play-together"],
     },
     "IMG_76.jpeg": {
@@ -953,6 +1040,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "shape", "experimentation", "playful"],
       collections: ["make-into", "play-rules"],
     },
     "IMG_77.jpeg": {
@@ -964,6 +1052,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["surreal", "transformation", "possibility"],
       collections: ["make-into", "what-else"],
     },
     "IMG_78.jpeg": {
@@ -975,6 +1064,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "personal", "social-play"],
       collections: ["play-together"],
     },
     "IMG_79.jpeg": {
@@ -986,6 +1076,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["personal", "nostalgia", "color"],
       collections: ["no-point"],
     },
     "IMG_80.jpeg": {
@@ -997,6 +1088,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "surreal", "odd"],
       collections: ["no-point", "lose-track"],
     },
     "IMG_81.jpeg": {
@@ -1008,6 +1100,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "playful", "social-play"],
       collections: ["lose-track", "play-together"],
     },
     "IMG_82.jpeg": {
@@ -1019,6 +1112,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "surreal", "playful"],
       collections: ["play-rules"],
     },
     "IMG_83.jpeg": {
@@ -1030,6 +1124,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["people", "social-play", "playful"],
       collections: ["make-into", "play-rules", "play-together"],
     },
     "IMG_84.jpeg": {
@@ -1041,6 +1136,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "texture", "experimentation"],
       collections: ["make-into", "play-rules"],
     },
     "IMG_85.jpeg": {
@@ -1052,6 +1148,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "color", "shape"],
       collections: [],
     },
     "IMG_86.jpeg": {
@@ -1063,6 +1160,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "nature", "texture"],
       collections: [],
     },
     "IMG_87.jpeg": {
@@ -1074,6 +1172,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "negative-space", "playful"],
       collections: [],
     },
     "IMG_88.jpeg": {
@@ -1085,6 +1184,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "color", "nature"],
       collections: [],
     },
     "IMG_89.jpeg": {
@@ -1096,6 +1196,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["shape", "color", "playful"],
       collections: [],
     },
     "IMG_90.jpeg": {
@@ -1107,6 +1208,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "shape", "texture"],
       collections: [],
     },
     "IMG_91.jpeg": {
@@ -1118,6 +1220,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "color", "shape"],
       collections: [],
     },
     "IMG_92.jpeg": {
@@ -1129,6 +1232,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "color", "shape"],
       collections: [],
     },
     "IMG_93.jpeg": {
@@ -1140,6 +1244,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["color", "texture", "playful"],
       collections: [],
     },
     "IMG_94.jpeg": {
@@ -1151,6 +1256,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["nature", "collage", "color", "surreal"],
       collections: [],
     },
     "IMG_95.jpeg": {
@@ -1162,6 +1268,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["architecture", "shape", "negative-space"],
       collections: [],
     },
     "IMG_96.jpeg": {
@@ -1173,6 +1280,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["texture", "shape", "experimentation"],
       collections: [],
     },
     "IMG_97.jpeg": {
@@ -1184,6 +1292,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "collage", "playful"],
       collections: [],
     },
     "IMG_98.jpeg": {
@@ -1195,6 +1304,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "shape", "color"],
       collections: [],
     },
     "IMG_99.jpeg": {
@@ -1206,6 +1316,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "negative-space"],
       collections: [],
     },
     "IMG_100.jpeg": {
@@ -1217,6 +1328,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "texture"],
       collections: [],
     },
     "IMG_101.jpeg": {
@@ -1228,6 +1340,7 @@
       keptBecause: "",
       returnedTo: "",
       connection: "",
+      tags: ["typography", "color", "shape"],
       collections: [],
     },
   };
@@ -1277,9 +1390,10 @@
       returnedTo: meta.returnedTo || "",
       connection: meta.connection || "",
 
+      tags: meta.tags || [],
       collections: meta.collections || [],
     };
   });
 
-  window.APP_DATA = { images, collections: COLLECTIONS, libraryCover: LIBRARY_COVER, symbolLabels: SYMBOL_LABELS };
+  window.APP_DATA = { images, collections: COLLECTIONS, libraryCover: LIBRARY_COVER, symbolLabels: SYMBOL_LABELS, tagVocabulary: TAG_VOCABULARY };
 })();
