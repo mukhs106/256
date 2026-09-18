@@ -67,7 +67,7 @@
   // replace the old sidebar's job.
   function selectCollection(id) {
     state.collectionId = id;
-    renderCanvas();
+    resetField();
   }
 
   // ---------- mode switching (symbol nav -> ModeManager) ----------
@@ -141,7 +141,7 @@
     photo.alt = "";
     photo.loading = "lazy";
     photo.decoding = "async";
-    photo.draggable = false; // the browser's native image-drag ghost would fight PLAY WITH THE RULES' own dragging
+    photo.draggable = false; // the field has its own drag-to-pan, and PLAY WITH THE RULES has its own dragging — don't let the browser's native image-drag ghost fight either
     frame.appendChild(photo);
     el.appendChild(frame);
 
@@ -155,29 +155,43 @@
     return el;
   }
 
-  // ---------- layout ----------
-  // An open-ended scattered composition: instead of laying the whole
-  // collection out once into a fixed-height canvas, the canvas grows
-  // downward in "regions" — one freshly shuffled pass through the
-  // current collection each — generated as the user scrolls near the
-  // bottom. Older regions are pruned once enough newer ones exist, so
-  // wandering never hits a hard edge but the DOM stays bounded. Every
-  // region uses the exact same per-image placement math the original
-  // single-pass layout used (same jitter/rotation/sizing/gaps), just
-  // continuing from wherever the previous region's columns left off,
-  // so a loop through the set never looks identical to the one before.
+  // ---------- layout: an infinite, pannable, zoomable field ----------
+  // The world is tiled into square "chunks" — each one a freshly
+  // shuffled pass through the current collection, packed with the
+  // exact same per-image placement math the site has always used
+  // (jitter/rotation/sizing/gaps via placeImage below). A chunk is
+  // just a bounded (CHUNK x CHUNK) version of what used to be an
+  // unbounded-downward "region": same algorithm, same look, just
+  // tiled in a 2D grid instead of stacked in one endless column, so
+  // wandering works in all four directions instead of only down.
+  // Panning/zooming is a CSS transform on .canvas (see applyTransform)
+  // driven by drag + wheel; chunks near the current view are generated
+  // on demand and anything outside it is dropped, so the field can be
+  // wandered indefinitely without DOM/memory growing without bound.
   //
-  // Tuning knobs, all in px/screens/count so they're easy to adjust:
+  // Tuning knobs, all in world px / zoom multiples so they're easy to adjust:
   const CAPTION_H = 22; // approximate space the always-on caption takes below each photo
-  const EXTEND_BUFFER_PX = 1600; // start generating more once within this many px of the bottom
-  const MAX_LIVE_REGIONS = 4; // shuffled passes kept mounted at once; older ones are pruned
-  const INITIAL_FILL_SCREENS = 1.5; // viewport-heights of content to pre-fill on load/reset
+  const CHUNK = 1400; // world px per chunk, in both axes
+  const CHUNK_BUFFER = 0; // extra ring of chunks preloaded beyond the visible viewport; ensureChunksLoaded
+                          // re-runs every frame while panning (see scheduleChunkCheck), so a large buffer
+                          // isn't needed to avoid pop-in and would just multiply the DOM footprint
+  const MIN_ZOOM = 0.4;
+  const MAX_ZOOM = 2.2;
+  const ZOOM_STEP = 1.25;
+  const DRAG_THRESHOLD = 4; // px of movement before a pointer-down counts as a drag, not a click
 
   let canvasEl = null;
   let canvasWrapEl = null;
-  let layout = null; // { width, cols, actualColWidth, colHeights, bottom, regions, imgs }
-  let extending = false;
-  let autoExtendEnabled = true; // modes can pause the scroll-triggered region generation via ArchiveAPI.setAutoExtend
+  let toolbarEl = null;
+  const pan = { x: 0, y: 0 }; // screen-space position of world (0,0)
+  let zoom = 1;
+  const chunks = new Map(); // "cx,cy" -> chunk element
+  let chunkCheckQueued = false;
+  let autoExtendEnabled = true; // modes can pause automatic chunk generation via ArchiveAPI.setAutoExtend
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
 
   function columnsFor(width) {
     const colWidth = width < 640 ? 135 : width < 1000 ? 160 : 185;
@@ -194,10 +208,8 @@
     return order;
   }
 
-  // Places one image within the running column layout — identical math
-  // to the original single-pass algorithm, just operating on layout
-  // state that now persists across regions instead of being local to
-  // one call. Mutates colHeights in place.
+  // Places one image within a chunk's running column layout — the
+  // same math the site has always used. Mutates colHeights in place.
   function placeImage(container, img, width, cols, actualColWidth, colHeights) {
     let col;
     if (Math.random() < 0.85) {
@@ -227,74 +239,194 @@
     container.appendChild(el);
 
     colHeights[col] = top + h + CAPTION_H;
+    return { el, col };
   }
 
-  // Lays out one freshly shuffled pass through the current collection,
-  // continuing downward from the layout's current column heights.
-  // Returns false (and does nothing) once there's nothing to lay out,
-  // so callers can use it as a loop condition without spinning forever.
-  // Deliberately does NOT prune here — see pruneOldRegions below.
-  function generateRegion() {
-    if (!layout || !layout.imgs.length) return false;
+  // Fills one CHUNK x CHUNK tile of the world at chunk-grid coordinates
+  // (cx, cy) with shuffled passes through the current collection,
+  // re-shuffling as needed until every column has filled the chunk's
+  // height (guarded so an empty/tiny collection can't loop forever).
+  //
+  // The "shortest column" bias means some columns can shoot well past
+  // CHUNK before the laggard column catches up and the fill loop stops
+  // — fine for the old single unbounded strip (it just meant a taller
+  // region), but here it would let a chunk's cards spill into the next
+  // chunk's own territory. So any placement whose *bottom* (not just
+  // its top) would land past CHUNK is discarded — colHeights still
+  // records the attempt, so that column is correctly treated as full —
+  // and the same photos simply turn up again when the neighboring
+  // chunk gets its own fresh shuffle.
+  function generateChunk(cx, cy) {
+    const el = document.createElement("div");
+    el.className = "canvas-chunk";
 
-    const region = document.createElement("div");
-    region.className = "canvas-region";
-    shuffledCopy(layout.imgs).forEach((img) => {
-      placeImage(region, img, layout.width, layout.cols, layout.actualColWidth, layout.colHeights);
-    });
-    canvasEl.appendChild(region);
-    layout.regions.push(region);
+    // A plain (non-positioned) grouping node — its cards are placed with
+    // world-absolute left/top (the chunk's own origin baked in below), the
+    // same coordinate space .photo-card left/top has always used, so
+    // per-card position reads elsewhere (e.g. modes/play-with-the-rules.js's
+    // cardBox, modes/lose-track-of-time.js's cardCenter) don't need to know
+    // chunks exist at all.
+    const originX = cx * CHUNK, originY = cy * CHUNK;
 
-    layout.bottom = Math.max(...layout.colHeights, 0) + 160;
-    canvasEl.style.height = layout.bottom + "px";
-    return true;
+    const imgs = filteredImages();
+    if (imgs.length) {
+      const { cols, actualColWidth } = columnsFor(CHUNK);
+      const colHeights = new Array(cols).fill(0);
+      let guard = 0;
+      while (Math.min(...colHeights) < CHUNK && guard < imgs.length * 6) {
+        for (const img of shuffledCopy(imgs)) {
+          if (Math.min(...colHeights) >= CHUNK) break;
+          const { el: cardEl, col } = placeImage(el, img, CHUNK, cols, actualColWidth, colHeights);
+          if (colHeights[col] > CHUNK) {
+            cardEl.remove();
+          } else {
+            cardEl.style.left = (parseFloat(cardEl.style.left) + originX) + "px";
+            cardEl.style.top = (parseFloat(cardEl.style.top) + originY) + "px";
+          }
+          guard++;
+        }
+      }
+    }
+
+    canvasEl.appendChild(el);
+    chunks.set(cx + "," + cy, el);
   }
 
-  // Drops the oldest live region(s) once more than MAX_LIVE_REGIONS
-  // exist. Only ever called from scroll-driven extension, never from
-  // the initial fill in renderCanvas — a small/filtered collection can
-  // need several tiny regions just to cover the first screen, and
-  // pruning during that initial fill would delete the very top of the
-  // page before the user ever scrolled anywhere.
-  function pruneOldRegions() {
-    while (layout.regions.length > MAX_LIVE_REGIONS) {
-      layout.regions.shift().remove();
+  function applyTransform() {
+    canvasEl.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+  }
+
+  function screenToWorld(sx, sy) {
+    return { x: (sx - pan.x) / zoom, y: (sy - pan.y) / zoom };
+  }
+
+  // Generates any chunks now needed to cover the viewport (plus a
+  // buffer ring) and drops any chunk outside that range — the range
+  // itself is the cap, so DOM size stays bounded by viewport/zoom
+  // rather than by how far or how long the user has wandered.
+  function ensureChunksLoaded() {
+    if (!autoExtendEnabled) return; // a mode can pause automatic chunk generation via ArchiveAPI.setAutoExtend
+    const w = canvasWrapEl.clientWidth, h = canvasWrapEl.clientHeight;
+    const topLeft = screenToWorld(0, 0);
+    const bottomRight = screenToWorld(w, h);
+    const minCx = Math.floor(topLeft.x / CHUNK) - CHUNK_BUFFER;
+    const maxCx = Math.floor(bottomRight.x / CHUNK) + CHUNK_BUFFER;
+    const minCy = Math.floor(topLeft.y / CHUNK) - CHUNK_BUFFER;
+    const maxCy = Math.floor(bottomRight.y / CHUNK) + CHUNK_BUFFER;
+
+    for (let cy = minCy; cy <= maxCy; cy++) {
+      for (let cx = minCx; cx <= maxCx; cx++) {
+        if (!chunks.has(cx + "," + cy)) generateChunk(cx, cy);
+      }
+    }
+
+    for (const [key, el] of chunks) {
+      const [cx, cy] = key.split(",").map(Number);
+      if (cx < minCx || cx > maxCx || cy < minCy || cy > maxCy) {
+        el.remove();
+        chunks.delete(key);
+      }
     }
   }
 
-  // Called on scroll: tops up the canvas once the unscrolled buffer
-  // below the viewport runs low, then prunes anything now well above
-  // the top of the live window. Guarded by `extending` (reset on the
-  // next frame, once layout has caught up) so a burst of scroll events
-  // can't trigger overlapping runs, and by a hard iteration cap so an
-  // empty/tiny collection can never loop forever.
-  function extendCanvasIfNeeded() {
-    if (extending || !layout || !autoExtendEnabled) return;
-    const remaining = () => layout.bottom - (canvasWrapEl.scrollTop + canvasWrapEl.clientHeight);
-    if (remaining() >= EXTEND_BUFFER_PX) return;
-
-    extending = true;
-    let guard = 0;
-    while (guard++ < 50 && remaining() < EXTEND_BUFFER_PX && generateRegion()) { /* keep extending */ }
-    pruneOldRegions();
-    requestAnimationFrame(() => { extending = false; });
+  function scheduleChunkCheck() {
+    if (chunkCheckQueued) return;
+    chunkCheckQueued = true;
+    requestAnimationFrame(() => { chunkCheckQueued = false; ensureChunksLoaded(); });
   }
 
-  function renderCanvas() {
+  // Zooms by `factor`, anchored on the given viewport-local point (so
+  // the point under the cursor/center stays put rather than the view
+  // recentering on the world origin).
+  function zoomAt(factor, localX, localY) {
+    const before = screenToWorld(localX, localY);
+    zoom = clamp(zoom * factor, MIN_ZOOM, MAX_ZOOM);
+    pan.x = localX - before.x * zoom;
+    pan.y = localY - before.y * zoom;
+    applyTransform();
+    scheduleChunkCheck();
+  }
+
+  function zoomFromButton(factor) {
+    const rect = canvasWrapEl.getBoundingClientRect();
+    zoomAt(factor, rect.width / 2, rect.height / 2);
+  }
+
+  // ---------- drag / wheel panning ----------
+
+  let drag = null; // { pointerId, startX, startY, startPanX, startPanY, moved }
+  let suppressNextClick = false;
+
+  // Move/up listeners live on `document` only while a drag is active
+  // (added on pointerdown, removed on pointerup) rather than using
+  // setPointerCapture — capture redirects the eventual click's target
+  // to the capturing element too, which broke opening isolation on a
+  // genuine (non-dragging) click.
+  function onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    // A press starting on a card is that card's own gesture (a plain
+    // click to isolate it, or — in PLAY WITH THE RULES — its own
+    // pick-up-and-move drag, see modes/play-with-the-rules.js); camera
+    // panning only starts from open space so the two never compete for
+    // the same drag.
+    if (e.target.closest(".photo-card")) return;
+    drag = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y, moved: false };
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerUp);
+  }
+
+  function onPointerMove(e) {
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      drag.moved = true;
+      canvasWrapEl.classList.add("dragging");
+    }
+    if (drag.moved) {
+      pan.x = drag.startPanX + dx;
+      pan.y = drag.startPanY + dy;
+      applyTransform();
+      scheduleChunkCheck();
+    }
+  }
+
+  function onPointerUp(e) {
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    if (drag.moved) suppressNextClick = true;
+    canvasWrapEl.classList.remove("dragging");
+    drag = null;
+    document.removeEventListener("pointermove", onPointerMove);
+    document.removeEventListener("pointerup", onPointerUp);
+    document.removeEventListener("pointercancel", onPointerUp);
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      // Trackpad pinch (browsers report it as a ctrl+wheel) or ctrl+wheel.
+      const rect = canvasWrapEl.getBoundingClientRect();
+      zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - rect.left, e.clientY - rect.top);
+    } else {
+      pan.x -= e.deltaX;
+      pan.y -= e.deltaY;
+      applyTransform();
+      scheduleChunkCheck();
+    }
+  }
+
+  // Resets the field to an empty world and re-centers the view — used
+  // on first load and whenever the underlying image set changes (a
+  // future collection filter via the symbols would call this too).
+  function resetField() {
     canvasEl.innerHTML = "";
-    canvasEl.style.height = "";
-    canvasWrapEl.scrollTop = 0;
-
-    const imgs = filteredImages();
-
-    const width = canvasEl.clientWidth || 900;
-    const { cols, actualColWidth } = columnsFor(width);
-    layout = { width, cols, actualColWidth, colHeights: new Array(cols).fill(0), bottom: 0, regions: [], imgs };
-
-    // Pre-fill the initial view (plus a little buffer) synchronously;
-    // scrolling takes over from there via extendCanvasIfNeeded.
-    let guard = 0;
-    while (guard++ < 50 && layout.bottom < canvasWrapEl.clientHeight * (1 + INITIAL_FILL_SCREENS) && generateRegion()) { /* keep filling */ }
+    chunks.clear();
+    pan.x = canvasWrapEl.clientWidth / 2;
+    pan.y = (toolbarEl ? toolbarEl.offsetHeight : 0) + 24;
+    zoom = 1;
+    applyTransform();
+    ensureChunksLoaded();
   }
 
   // ---------- isolation view ----------
@@ -478,6 +610,15 @@
     getCanvasWrapEl() { return canvasWrapEl; },
     getCards() { return canvasEl ? Array.from(canvasEl.querySelectorAll(".photo-card")) : []; },
     cardFor(imgId) { return canvasEl ? canvasEl.querySelector('.photo-card[data-id="' + imgId + '"]') : null; },
+    // The currently visible viewport, in the same world coordinates
+    // card left/top are placed in (see generateChunk) — lets a mode
+    // reason about "what's on screen right now" now that the field pans
+    // freely instead of just scrolling down (see modes/lose-track-of-time.js).
+    getViewportBounds() {
+      const topLeft = screenToWorld(0, 0);
+      const bottomRight = screenToWorld(canvasWrapEl.clientWidth, canvasWrapEl.clientHeight);
+      return { left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y };
+    },
     openIsolation,
     closeIsolation,
     setAutoExtend(on) { autoExtendEnabled = !!on; },
@@ -521,17 +662,33 @@
   }
 
   async function init() {
-    await preloadDimensions();
+    // Also wait for the webfont before measuring the header's height
+    // below (resetField) — the fallback font can wrap the mobile header
+    // to fewer lines, understating its height and leaving the initial
+    // pan offset too small.
+    await Promise.all([preloadDimensions(), document.fonts.ready]);
 
     canvasEl = document.getElementById("canvas");
     canvasWrapEl = document.getElementById("canvas-wrap");
+    toolbarEl = document.querySelector(".toolbar");
 
     renderCanvas();
 
     window.ModeManager.configure(ArchiveAPI);
     wireModeSwitching();
 
-    canvasWrapEl.addEventListener("scroll", extendCanvasIfNeeded, { passive: true });
+    canvasWrapEl.addEventListener("pointerdown", onPointerDown);
+    canvasWrapEl.addEventListener("wheel", onWheel, { passive: false });
+    // Consumes suppressNextClick on the very next click anywhere in the
+    // field — capture phase, so it runs (and can stop) before a card's
+    // own click listener sees it — regardless of whether the drag
+    // happened to end over a card or over empty space.
+    canvasWrapEl.addEventListener("click", (e) => {
+      if (suppressNextClick) { suppressNextClick = false; e.stopPropagation(); }
+    }, true);
+
+    document.getElementById("zoom-in").addEventListener("click", () => zoomFromButton(ZOOM_STEP));
+    document.getElementById("zoom-out").addEventListener("click", () => zoomFromButton(1 / ZOOM_STEP));
 
     document.getElementById("isolation-close").addEventListener("click", closeIsolation);
     document.getElementById("isolation").addEventListener("click", (e) => {
@@ -548,7 +705,7 @@
     document.addEventListener("click", (e) => {
       const panel = document.getElementById("info-panel");
       if (panel.hidden) return;
-      if (panel.contains(e.target) || e.target.id === "info-btn") return;
+      if (panel.contains(e.target) || e.target.closest("#info-btn")) return;
       closeInfoPanel();
     });
     document.addEventListener("keydown", (e) => {

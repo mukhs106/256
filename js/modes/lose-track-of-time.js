@@ -40,10 +40,9 @@
   }
 
   function pickTarget(ctx) {
-    const canvasWrap = ctx.archive.getCanvasWrapEl();
-    const canvasEl = ctx.archive.getCanvasEl();
-    const viewTop = canvasWrap.scrollTop - 150;
-    const viewBottom = canvasWrap.scrollTop + canvasWrap.clientHeight + 150;
+    const bounds = ctx.archive.getViewportBounds();
+    const viewTop = bounds.top - 150;
+    const viewBottom = bounds.bottom + 150;
 
     if (Math.random() < NEAR_CARD_CHANCE) {
       const nearby = ctx.archive.getCards().filter((c) => {
@@ -62,7 +61,7 @@
     // An open point within (roughly) the visible field — either as the
     // 40% baseline, or a fallback when nothing's mounted nearby yet.
     return {
-      x: Math.max(20, canvasEl.clientWidth * (0.1 + Math.random() * 0.8)),
+      x: bounds.left + Math.random() * (bounds.right - bounds.left),
       y: viewTop + Math.random() * (viewBottom - viewTop),
     };
   }
@@ -72,7 +71,7 @@
 
     enter(ctx) {
       const canvasEl = ctx.archive.getCanvasEl();
-      const canvasWrap = ctx.archive.getCanvasWrapEl();
+      const bounds = ctx.archive.getViewportBounds();
 
       const creature = document.createElement("div");
       creature.className = "wander-lure";
@@ -85,8 +84,8 @@
       ctx.addTempNode(creature, canvasEl);
 
       ctx.scratch.pos = {
-        x: canvasEl.clientWidth * (0.25 + Math.random() * 0.5),
-        y: canvasWrap.scrollTop + canvasWrap.clientHeight * (0.25 + Math.random() * 0.5),
+        x: bounds.left + (bounds.right - bounds.left) * (0.25 + Math.random() * 0.5),
+        y: bounds.top + (bounds.bottom - bounds.top) * (0.25 + Math.random() * 0.5),
       };
       ctx.scratch.target = pickTarget(ctx);
       ctx.scratch.state = "flying";

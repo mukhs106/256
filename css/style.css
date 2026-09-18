@@ -42,7 +42,7 @@ html, body {
   font-family: var(--font-body);
   font-weight: var(--weight-regular);
   font-size: 14px;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -121,7 +121,23 @@ button {
   object-fit: contain;
   position: relative;
   z-index: 1;
-  transition: transform 0.15s ease;
+}
+
+/* Sized larger than the 52x52 box via an absolutely positioned
+   pseudo-element, so it can breathe without changing the box's own
+   dimensions (no layout shift). No longer shown on hover (hover is
+   just the wiggle below) — kept only as the active-mode indicator, so
+   the currently-engaged symbol/mode stays legible without a hover. */
+.nav-symbol::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: var(--yellow-hover);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
 }
 
 /* Active mode indicator — the symbol itself shrinks slightly rather
@@ -152,9 +168,9 @@ button {
 .brand-sub {
   font-family: var(--font-body);
   font-size: 13px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
   color: #2F2965;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* ---------------- main ---------------- */
@@ -180,20 +196,50 @@ button {
   z-index: 80;
   padding: 22px 32px 0;
   height: 132px;
-  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper) 60%, rgba(255, 255, 255, 0) 100%);
+  /* Several stops on an easing curve (rather than one linear fade) so
+     the dissolve into the field below reads as gradual throughout,
+     without the single visible "edge" a two-stop fade tends to have. */
+  background: linear-gradient(
+    to bottom,
+    var(--paper) 0%,
+    var(--paper) 25%,
+    rgba(255, 255, 255, 0.94) 40%,
+    rgba(255, 255, 255, 0.8) 53%,
+    rgba(255, 255, 255, 0.58) 65%,
+    rgba(255, 255, 255, 0.36) 77%,
+    rgba(255, 255, 255, 0.16) 89%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
 }
 
+/* The viewport onto the infinite field. No native scrollbars — panning
+   is done by hand (drag + wheel, see app.js) so the field can move in
+   all four directions instead of just down. */
 .canvas-wrap {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 108px 20px 60px;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
+.canvas-wrap.dragging {
+  cursor: grabbing;
+}
+
+/* The "world" — chunks are absolutely positioned within it at their
+   world coordinates (which can be negative in any direction). Moved
+   entirely via transform (translate for pan, scale for zoom) rather
+   than by setting an explicit size, so it has no edges of its own. */
 .canvas {
-  position: relative;
-  min-height: 200px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* ---------------- photo card ---------------- */
@@ -207,7 +253,7 @@ button {
   position: relative;
   overflow: hidden;
   background: var(--line);
-  box-shadow: var(--card-shadow);
+  box-shadow: rgba(255, 255, 255, 0.4);
   outline: 1px solid rgba(255, 255, 255, 0.4);
   outline-offset: -1px;
 }
@@ -220,33 +266,26 @@ button {
 }
 
 .photo-card:hover {
-  z-index: 999 !important;
+  /* Above every other (non-hovered) card — those top out at 70 — but
+     still safely under the header/nav's z-index:80, so a hovered card
+     never jumps above the fixed toolbar and its gradient. */
+  z-index: 79 !important;
 }
 
 .photo-card:hover .photo-frame {
-  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12);
-  outline-color: var(--yellow);
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 16px 1px var(--yellow-hover);
 }
 
 .photo-caption {
   margin-top: 6px;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
+  display: block;
   font-family: var(--font-body);
   font-size: 9.5px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
   color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
-}
-
-.photo-dots {
-  flex: 0 0 auto;
-  font-size: 6px;
-  letter-spacing: 2px;
-  color: var(--ink);
 }
 
 .photo-name {
@@ -394,20 +433,26 @@ button {
   z-index: 160;
   width: 34px;
   height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   border: none;
   background: var(--yellow);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-style: italic;
-  font-weight: var(--weight-medium);
-  font-size: 14px;
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35);
 }
 
-.info-btn:hover,
-.info-btn[aria-expanded="true"] {
-  box-shadow: 0 0 0 7px var(--yellow-hover), 0 6px 16px -6px rgba(0, 0, 0, 0.35);
+.info-btn-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Same treatment as the category symbols: a small wiggle, nothing
+   behind it — no glow ring, halo, or background change on hover. */
+.info-btn:hover .info-btn-icon,
+.info-btn:focus-visible .info-btn-icon {
+  animation: symbolWiggle 0.45s ease-in-out 1;
 }
 
 .info-panel {
@@ -604,11 +649,9 @@ body[data-mode="play-with-the-rules"] .photo-card.dragging .photo-frame {
      three symbols, however the flex-wrap happens to break otherwise. */
   .brand { flex-basis: 100%; }
 
-  .brand-name { font-size: 16px; }
+  .brand-name { font-size: 18px; }
 
-  .brand-sub { font-size: 9px; }
-
-  .canvas-wrap { padding-top: 190px; }
+  .brand-sub { font-size: 9.5px; }
 
   .isolation-stage {
     flex-direction: column;
